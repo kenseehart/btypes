@@ -1,6 +1,7 @@
 import unittest
-from typing import Union
-from collections import defaultdict
+from typing import Union, Any
+from collections.abc import Mapping
+ABCMeta = type(Mapping)
 
 class IntDuck:
     '''Implement integer emulation. Define __int__() and IntDuck does the rest.'''
@@ -57,8 +58,11 @@ class IntDuck:
     
 
 
-class field(type):
+
+
+class field(ABCMeta):
     '''Unbound field implementing propery protocol'''
+
     def __repr__(self):
         return self.__name__
 
@@ -69,10 +73,15 @@ class field(type):
             return self(instance._target) # return the binding of this field to the target
 
     def __set__(self, instance, value):
-        self._btype._set_field_value(self(instance._target), value)
+        self(instance._target)._v = value
+
 
 class bound_field(IntDuck, metaclass=field):
     '''Bound field'''
+    _offset:int
+    _mask:int
+    __slots__ = ('_target')
+    
     def __init__(self, target:Union[int, list]=0):
         '''bind a field to a target list consisting of a single integer'''
         if isinstance(target, int):
@@ -81,17 +90,28 @@ class bound_field(IntDuck, metaclass=field):
             self._target = target
         else:
             raise TypeError(f'{type(self)} initializer must be int or list of one int')
-
+        
     def __repr__(self):
-        return repr(self._btype._get_field_value(self))
+        return repr(self._v)
     
     @property
     def _n(self) -> int:
+        '''raw integer value'''
         return (self._target[0] >> self._offset) & self._mask
         
     @_n.setter        
     def _n(self, n:int):
         self._target[0] = self._target[0] & ~(self._mask << self._offset) | ((n&self._mask) << self._offset)
+
+    @property
+    def _v(self) -> int:
+        '''overload _mixin to express as a different type'''
+        return int(self)
+        
+    @_v.setter        
+    def _v(self, n:int):
+        '''overload _mixin to receive other data types'''
+        self._n = n
 
     # comparison
     def __eq__(self, other):
@@ -108,44 +128,47 @@ class bound_field(IntDuck, metaclass=field):
         
     def __int__(self): # may be overloaded (e.g. sint support for negatives)
         return self._n
+    
+    def __str__(self):
+        return str(self._v)
+    
+    def __setitem__(self, k, v):
+        setattr(self, k, v)
+        
+    def __setattr__(self, k, v):
+        if k in self.__slots__ or hasattr(self, k):
+            super().__setattr__(k, v)
+        else:
+            raise KeyError(f'{type(self)} does not have attribute {k}')
+
+            
+            
 
 
 class btype:
     '''Base class for type classes'''
-    def __call__(self, name, value=None):
+    _repr:str
+    _size:int
+    
+    def __call__(self, name, value:Any=None):
         mf = self._allocate(name, 0)
         if value is None:
             return mf
         else:
             f = mf([0])
-            self._set_field_value(f, value)
+            f._v = value
             return f
         
-    def _allocate(self, name, offset=0) -> bound_field:
+    def _allocate(self, name, offset:int=0) -> bound_field:
         ftype = field(name, (type(self)._mixin,), {})
         ftype._size = self._size
         ftype._mask = ((1<<self._size)-1)
         ftype._offset = offset
         ftype._btype = self
         return ftype
-
-    def _get_field_value(self, f:bound_field):
-        return f._n
-    
-    def _set_field_value(self, f:bound_field, v:int):
-        f._n = int(v)
-
-    _get_field_int = _get_field_value
-
-    def _render(self, f):
-        return str(self._get_field_value(f))  
-    
+   
     def __repr__(self):
         return self._repr
-    
-    class _mixin(bound_field):
-        '''overload class _mixin in btype derived class to extend the bound_field'''
-        pass
 
     
 class struct(btype):
@@ -158,27 +181,40 @@ class struct(btype):
         '''allocate a field recursively'''
         ftype = super()._allocate(name, offset)
         z = offset
+
         for fname, ft in reversed(self._fields):
             setattr(ftype, fname, ft._allocate(f'{name}.{fname}', z))
             z += ft._size
                     
         return ftype
     
-    def _get_field_value(self, f):
-        d = {}
-        for k, t in self._fields:
-            d[k] = t._get_field_value(getattr(f, k))
-        return d
+    class _mixin(bound_field, Mapping):
 
-    def _set_field_value(self, f:bound_field, v:Union[int, dict]):
-        if isinstance(v, dict):
-            for k, fv in v.items():
-                setattr(f, k, fv)
-        else:
-            super()._set_field_value(f, v)
+        @property
+        def _v(self) -> dict:
+            d = {}
+            for k, t in self._btype._fields:
+                d[k] = getattr(self, k)._v
+            return d
+            
+        @_v.setter        
+        def _v(self, v:Union[int, dict]):
+            if isinstance(v, dict):
+                for k, fv in v.items():
+                    setattr(self, k, fv)
+            else:
+                self._n = v
 
-    def __repr__(self):
-        return self._repr
+        def __len__(self): 
+            return len(self._btype._fields)
+      
+        def __iter__(self): 
+            for k, t in self._btype._fields:
+                yield k
+
+        def __getitem__(self, k):
+            return getattr(self, k)
+
     
 class uint(btype):
     '''unsigned integer with optional enum'''
@@ -189,35 +225,30 @@ class uint(btype):
         self._enum = _enum or {}
         self._renum = {v:k for k,v in self._enum.items()}
         
-    def _set_field_value(self, f:bound_field, v:Union[int, str]):
-        if isinstance(v, str):
-            try:
-                v = self._enum[v]
-            except KeyError:
-                try:
-                    v = int(v)
-                except ValueError:
-                    raise ValueError(f'{f}: undefined enum {v}')
-                
-        super()._set_field_value(f, v)
-
-    def _get_field_value(self, f:bound_field):
-        v = int(f)
-        try:
-            v = self._renum[v] # defaults to raw int if enum is not defined
-        except KeyError:
-            pass
-        return v
-
     class _mixin(bound_field):
-        #def _get(self):
-        #def _set(self, v):
+        @property
+        def _v(self) -> dict:
+            v = int(self)
+            try:
+                v = self._btype._renum[v] # defaults to raw int if enum is not defined
+            except KeyError:
+                pass
+            return v
             
-        def __str__(self):
-            pass
-            
-            #v = self._get_field_value(...)
-
+        @_v.setter        
+        def _v(self, v:Union[int, dict]):
+        
+            if isinstance(v, str):
+                try:
+                    v = self._btype._enum[v]
+                except KeyError:
+                    try:
+                        v = int(v)
+                    except ValueError:
+                        raise ValueError(f'{f}: undefined enum {v}')
+                    
+            self._n = v
+    
 
 class sint(uint):
     '''signed integer with optional enum'''
@@ -291,6 +322,7 @@ class StructTest(unittest.TestCase):
             ("b", sint(4)), # 4 bit integer
         )
         
+       
         f = foo('f')(0)
         f.a = 'beta'
         f.b = -1
