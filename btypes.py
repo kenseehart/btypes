@@ -1,7 +1,5 @@
 import unittest
 from typing import Union, Any
-from collections.abc import Mapping
-ABCMeta = type(Mapping)
 
 class IntDuck:
     '''Implement integer emulation. Define __int__() and IntDuck does the rest.'''
@@ -55,12 +53,8 @@ class IntDuck:
         self._n = int(self) // other
         return self    
     
-    
 
-
-
-
-class field(ABCMeta):
+class field(type):
     '''Unbound field implementing propery protocol'''
 
     def __repr__(self):
@@ -75,12 +69,18 @@ class field(ABCMeta):
     def __set__(self, instance, value):
         self(instance._target)._v = value
 
+    def __getitem__(self, k):
+        if isinstance(k, int):
+            k = f'_{k}' # array elements as field property instances
+            
+        return getattr(self, k)
+    
 
 class bound_field(IntDuck, metaclass=field):
     '''Bound field'''
     _offset:int
     _mask:int
-    __slots__ = ('_target')
+    __slots__ = ('_target',)
     
     def __init__(self, target:Union[int, list]=0):
         '''bind a field to a target list consisting of a single integer'''
@@ -133,6 +133,9 @@ class bound_field(IntDuck, metaclass=field):
         return str(self._v)
     
     def __setitem__(self, k, v):
+        if isinstance(k, int):
+            k = f'_{k}' # array elements as field property instances
+        
         setattr(self, k, v)
         
     def __setattr__(self, k, v):
@@ -140,10 +143,7 @@ class bound_field(IntDuck, metaclass=field):
             super().__setattr__(k, v)
         else:
             raise KeyError(f'{type(self)} does not have attribute {k}')
-
             
-            
-
 
 class btype:
     '''Base class for type classes'''
@@ -169,53 +169,10 @@ class btype:
    
     def __repr__(self):
         return self._repr
-
     
-class struct(btype):
-    def __init__(self, *fields):
-        self._fields = fields
-        self._size = sum(f._size for _,f in fields)
-        self._repr = f"struct{fields}"
-        
-    def _allocate(self, name:str, offset:int=0) -> field:
-        '''allocate a field recursively'''
-        ftype = super()._allocate(name, offset)
-        z = offset
+    def __getitem__(self, n):
+        return array(self, n)
 
-        for fname, ft in reversed(self._fields):
-            setattr(ftype, fname, ft._allocate(f'{name}.{fname}', z))
-            z += ft._size
-                    
-        return ftype
-    
-    class _mixin(bound_field, Mapping):
-
-        @property
-        def _v(self) -> dict:
-            d = {}
-            for k, t in self._btype._fields:
-                d[k] = getattr(self, k)._v
-            return d
-            
-        @_v.setter        
-        def _v(self, v:Union[int, dict]):
-            if isinstance(v, dict):
-                for k, fv in v.items():
-                    setattr(self, k, fv)
-            else:
-                self._n = v
-
-        def __len__(self): 
-            return len(self._btype._fields)
-      
-        def __iter__(self): 
-            for k, t in self._btype._fields:
-                yield k
-
-        def __getitem__(self, k):
-            return getattr(self, k)
-
-    
 class uint(btype):
     '''unsigned integer with optional enum'''
 
@@ -259,11 +216,81 @@ class sint(uint):
             if v&(1<<(self._size-1)):
                 v = v - (1<<(self._size))
             return v
+        
+        
+class struct(btype):
+    def __init__(self, *fields):
+        self._fields = fields
+        self._size = sum(f._size for _,f in fields)
+        self._repr = f"struct{fields}"
+        
+    def _allocate(self, name:str, offset:int=0) -> field:
+        '''allocate a field recursively'''
+        ftype = super()._allocate(name, offset)
+        z = offset
 
-class array(btype):
-    pass
+        for fname, ft in reversed(self._fields.items()):
+            setattr(ftype, fname, ft._allocate(f'{name}.{fname}', z))
+            z += ft._size
+
+        return ftype
+    
+    class _mixin(bound_field):
+
+        @property
+        def _v(self) -> dict:
+            d = {}
+            for k, t in self._btype._fields:
+                d[k] = getattr(self, k)._v
+            return d
+            
+        @_v.setter        
+        def _v(self, v:Union[int, dict]):
+            if isinstance(v, dict):
+                for k, fv in v.items():
+                    setattr(self, k, fv)
+            else:
+                self._n = v
+
+        def __len__(self): 
+            return len(self._btype._fields)
+      
+        def __iter__(self): 
+            for k, t in self._btype._fields:
+                yield k
+
+        def __getitem__(self, k):
+            if isinstance(k, int):
+                k = f'_{k}' # array elements as field property instances            
+
+            return getattr(self, k)
+
+    
 
 
+class array(struct):
+    '''array'''
+    def __init__(self, etype: btype, dim:int):
+        self._etype = etype
+        self._dim = dim
+        self._size = etype._size*dim
+        self._repr = f"{etype}[{dim}]"
+        self._fields = {f'_{i}': etype for i in range(dim)}
+        
+    class _mixin(struct._mixin):
+        @property
+        def _v(self) -> list:
+            return [self[i] for i in range(self._btype._dim)]
+            
+        @_v.setter        
+        def _v(self, v:Union[int, list, tuple]):
+            if isinstance(v, (list, tuple)):
+                for i, fv in enumerate(v):
+                    setattr(self, f'_{i}', fv)
+            elif isinstance(v, int):
+                self._n = v
+            
+            
 class StructTest(unittest.TestCase):
     def test_simple(self):
         u4t = uint(4) # type
@@ -303,6 +330,13 @@ class StructTest(unittest.TestCase):
             ("b", uint(4)),
         )
         
+        bats = uint(5)[3]('bats')
+        b = bats(0)
+        b[0]=3
+        b[1]=2
+        print (b)
+        
+        
         bar = struct(
             ("f", foo), # array of 10 foo elements
             ("c", uint(5)),
@@ -320,10 +354,11 @@ class StructTest(unittest.TestCase):
         foo = struct(
             ("a", uint(3, _enum={"alpha":0, "beta":1, "gamma":2})),  # 3 bit integer with enum
             ("b", sint(4)), # 4 bit integer
+            ("bars", array(bar, 5)),
         )
         
        
-        f = foo('f')(0)
+        f = foo('foo')(0)
         f.a = 'beta'
         f.b = -1
         
