@@ -8,10 +8,10 @@ Btypes is a tool for working with packed binary data. It's ideal for things like
 # Comparison to ctypes
 As the name suggests, some of the usage and features are inspired by ctypes. While there are similarities, the primary purpose is different.
 
-|    | ctypes | btypes |
+| **tool** | **primary purpose** | **implementation** |
 |----|--------|-------|
-| **primary purpose** | interface with C/C++ code  | process bit alligned interfaces  |
-| **implementation** | python and C++ | python |
+| ctypes | interface with C/C++ code, model C/C++ datatypes | python, C++ |
+| btypes | model arbitary bit alligned datatypes and interfaces | python |
 
 
 # Ease of use
