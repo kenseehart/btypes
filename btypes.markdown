@@ -1,3 +1,6 @@
+
+![eric half-a-bee](images/b.png)
+
 # BTypes
 
 Btypes is a tool for working with packed binary data. It's ideal for things like verilog interfaces, and any situation where you are working with arbitrarily sized bitfields.
