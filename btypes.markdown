@@ -56,7 +56,7 @@ As a rule, the value type is always json compatible.
 | `sint(size)` | `int` | |
 | `uint(size, enum)` | `str` or `int` | `enum={'label': value, ...}` output is str, input is either `int` or `str` 
 | `struct((name, btype), ...)` | `dict` | values expanded recursively |
-| `array(...)` | `list` | |
+| `array(elem_type, dim)` | `list` | alternate syntax: `elem_type[dim]` |
 
 When used directly, bound fields have duck-type behavior similar to their respective values, however it is important to keep in mind that fields are views of data. To access data properly, use the `_v` attribute.
 
