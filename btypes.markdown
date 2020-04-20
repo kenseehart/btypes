@@ -11,20 +11,29 @@ As the name suggests, some of the usage and features are inspired by ctypes. Whi
 | **implementation** | python and C++ | python |
 
 
-# Interoperability
+# Ease of use
 
-**json**: Bound fields always evaluate as json compatitble simple types (int, str, list, dict), so outputting an interface as json is easy.
 ``` python
-import json
 
-interface = foo()
-for interface._n in data_source:
-    print (json.dumps(foo._v))
+raw_data = sequence_of_integers()
+
+def get_dead_parrot_quests(raw_data_source: Sequence[int]) -> Iterator[str]:
+    '''yields a sequence of json quests where the parrot is dead'''
+    data = my_interface()
+    json_list = []
+    
+    # fields can be assigned outside the loop for speed and convenience
+    status = data.parrot.status
+    quest = data.quest
+
+    for data._n in raw_data_source:
+        if status == 'dead':
+            yield quest._json
+            
 ```
 
-# Parameterized interfaces
 
-Types are first class expressions, and as such can easily be parameterized.
+
 
 # Performance
 
