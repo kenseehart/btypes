@@ -7,7 +7,7 @@ As the name suggests, some of the usage and features are inspired by ctypes. Whi
 
 |    | ctypes | btypes |
 |----|--------|-------|
-| **primary purpose** | interface with C/C++ code  | process binary interfaces  |
+| **primary purpose** | interface with C/C++ code  | process bit alligned interfaces  |
 | **implementation** | python and C++ | python |
 
 
