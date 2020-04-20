@@ -1,11 +1,11 @@
 
 ![eric half-a-bee](images/b.png)
-
 # BTypes
 
 Btypes is a tool for working with packed binary data. It's ideal for things like verilog interfaces, and any situation where you are working with arbitrarily sized bitfields.
 
-# Comparison to ctypes
+# Comparison to [ctypes](https://docs.python.org/3/library/ctypes.html)
+
 As the name suggests, some of the usage and features are inspired by ctypes. While there are similarities, the primary purpose is different.
 
 | **tool** | **primary purpose** | **implementation** |
