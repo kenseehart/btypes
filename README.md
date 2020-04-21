@@ -38,7 +38,23 @@ If this is not desired, it is up to the programmer to add padding as needed. Ind
 
 ``` python
 
-raw_data = sequence_of_integers()
+raw_data_source = sequence_of_integers_from_somewhere()
+
+parrot_struct = struct(
+    ('status', uint(2, enum={'dead': 0, 'pining': 1, 'resting': 2}),
+    ('plumage_rgb', uint(5)[3]),
+) 
+
+quest_struct = struct(
+    ('type', uint(3, enum={'grail':0, 'shrubbery':1, 'meaning':2, 'larch':3, 'gourd':4}),
+    ('cause_of_death', uint(3, enum={'vorpal_bunny':0, 'liverectomy':1, 'ni':2, 'question':3, 'gourd':4}),
+    ('holy', uint(1)),
+)
+
+my_interface = struct(
+    ('parrot', parrot_struct),
+    ('quest', quest_struct),
+)
 
 def get_dead_parrot_quests(raw_data_source: Sequence[int]) -> Iterator[str]:
     '''yields a sequence of json quests where the parrot is dead'''
@@ -55,6 +71,12 @@ def get_dead_parrot_quests(raw_data_source: Sequence[int]) -> Iterator[str]:
             
 ```
 
+Note that the data source is a sequence of integers.
+This may be counterintuitive if you are accustomed to languages with finite sized integers.
+Python integers are unbounded, which means a data record of any size can be encoded as a single integer, and btypes operates on these unbounded integers.
+
+Typically your data source might be a sequence of arrays of 32 or 64 bit integers.
+If so, it's easy to implement a generator to perform the conversion by shift-adding the arrays.
 
 # Interoperability
 
