@@ -14,6 +14,8 @@ But half the bee has got to be
 
 A vis-a-vis its entity, d'you see?
 
+-- *Eric Idle*, on why he prefers btypes
+
 # Comparison to [ctypes](https://docs.python.org/3/library/ctypes.html)
 
 As the name suggests, some of concepts are inspired by ctypes. While there are similarities, the primary purpose is different.
