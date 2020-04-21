@@ -14,7 +14,7 @@ But half the bee has got to be
 
 A vis-a-vis its entity, d'you see?
 
--- *John Cleese*, on why he prefers btypes
+-- *John Cleese*
 
 # Comparison to [ctypes](https://docs.python.org/3/library/ctypes.html)
 
