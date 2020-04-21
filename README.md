@@ -16,7 +16,7 @@ A vis-a-vis its entity, d'you see?
 
 # Comparison to [ctypes](https://docs.python.org/3/library/ctypes.html)
 
-As the name suggests, some of the usage and features are inspired by ctypes. While there are similarities, the primary purpose is different.
+As the name suggests, some of concepts are inspired by ctypes. While there are similarities, the primary purpose is different.
 
 | **tool** | **primary purpose** | **implementation** |
 |----|--------|-------|
@@ -80,9 +80,9 @@ When used directly, bound fields have duck-type behavior similar to their respec
 
 # Performance
 
-In `btypes`, performance is acheived by performing nearly all symbolic processing outside the main loop. So a python only application is pretty quick. You can create bound field instances outside the main loop, so inside the main loop, a bound field is computed with nothing more than a `shift-and` operation.
+In `btypes`, performance is acheived by performing nearly all symbolic processing at interface allocation time, prior to binding data, and typically outside the main loop. So a python only application is pretty quick. Inside the main loop, a bound field is usually computed with nothing more than a `shift-and` operation.
 
-Expressions such as filters and rules can be processed under the hood into purely numerical bitwise expressions. These expressions behave in the same way as ordinary fields, so you can bind them to a data source. Also they can be rendered as C/C++/python compatible source code strings which can then be processed with external tools such as numpy or compiled as C/C++. For example, `foo.payload.page[2].widget_type==42` translates to the somewhat less readable but faster `"(x[2]<<21)&0x3f)==42"`. That latter expression can filter millions of blocks per second, and the smaller result set can be conveniently processed in python. 
+The expressions module allows you to translate expressions such as filters and rules into purely numerical bitwise expressions. These expressions behave in the same way as ordinary fields, so you can bind them to a data source. Also they can be rendered as C/C++/python compatible source code strings which can then be processed with external tools such as numpy or compiled as C/C++. For example, `foo.payload.page[2].widget_type == 42` might translate to the somewhat less readable but faster `"(x[5] << 21) & 0x3f) == 42"`. That latter expression can filter millions of blocks per second, and the smaller result set can be conveniently processed in python. 
 
 
 # Types, Fields, and Bound Fields
