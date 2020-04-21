@@ -6,11 +6,11 @@ Btypes is a tool for working with packed binary data. It's ideal for things like
 
 # Philosophy of btypes
 
-Half a byte, philosophically
+Half a bee, philosophically
 
 Must, ipso facto, half not be
 
-But half the byte has got to be
+But half the bee has got to be
 
 A vis-a-vis its entity, d'you see?
 
