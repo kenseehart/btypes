@@ -2,7 +2,7 @@
 ![eric half-a-bee](images/b.png)
 # btypes
 
-Btypes is a tool for working with packed binary data. It's ideal for things like verilog interfaces, and any situation where you are working with arbitrarily sized bitfields.
+Btypes is a tool for working with packed binary data. It's ideal for things like verilog interfaces, and any situation where you are working with arbitrarily sized bitfields, and you need precise convenient control of bit the layout.
 
 # Philosophy of btypes
 
