@@ -1,8 +1,18 @@
 
 ![eric half-a-bee](images/b.png)
-# BTypes
+# btypes
 
 Btypes is a tool for working with packed binary data. It's ideal for things like verilog interfaces, and any situation where you are working with arbitrarily sized bitfields.
+
+# Philosophy of btypes
+
+Half a byte, philosophically
+
+Must, ipso facto, half not be
+
+But half the byte has got to be
+
+A vis-a-vis its entity, d'you see?
 
 # Comparison to [ctypes](https://docs.python.org/3/library/ctypes.html)
 
@@ -18,7 +28,7 @@ As the name suggests, some of the usage and features are inspired by ctypes. Whi
 
 In C++, bit field allocation is implementation defined. Usually word boundaries are respected, and the total size of a structure is padded to a multiple of 8 bits. This is the primary reason why `ctypes` is not suitable for certain use cases for which `btypes` was designed.
 
-In `btypes`, the size of a `struct` is the sum of the size of it's members, which are allocated consecutively without implicit padding. Fields may even straddle word boundaries. The intent is to give the programmer full control and predictability with respect to bit allocation. If you create an array of 7 7-bit integers, it will occupy 49 bits: `uint(7)[7]._size == 49`. Also, there is no upper bound on the size of a field.
+In `btypes`, the size of a `struct` is the sum of the size of it's members, which are allocated consecutively without implicit padding. Fields may even straddle word boundaries. The intent is to give the programmer full control and predictability with respect to bit allocation. If you create an array of 7 7-bit integers, it will occupy 49. Philosophically, must ipso facto not be padded to 64 bits. `uint(7)[7]._size == 49`. Also, there is no upper bound on the size of a field.
 
 If this is not desired, it is up to the programmer to add padding as needed. Indeed, it would not be difficult to define a new btype class derived from `struct` and implement a different allocation scheme with padding.
 
