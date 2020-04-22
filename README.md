@@ -108,7 +108,14 @@ When used directly, bound fields have duck-type behavior similar to their respec
 
 In `btypes`, performance is acheived by performing nearly all symbolic processing at interface allocation time, prior to binding data, and typically outside the main loop. So a python only application is pretty quick. Inside the main loop, a bound field is usually computed with nothing more than a `shift-and` operation.
 
-The expressions module allows you to translate expressions such as filters and rules into purely numerical bitwise expressions. These expressions behave in the same way as ordinary fields, so you can bind them to a data source. Also they can be rendered as C/C++/python compatible source code strings which can then be processed with external tools such as numpy or compiled as C/C++. For example, `foo.payload.page[2].widget_type == 42` might translate to the somewhat less readable but faster `"(x[5] << 21) & 0x3f) == 42"`. That latter expression can filter millions of blocks per second, and the smaller result set can be conveniently processed in python. 
+The expressions module allows you to translate expressions such as filters and rules into purely numerical bitwise expressions. These expressions behave in the same way as ordinary fields, so you can bind them to a data source. Also they can be rendered as C/C++/python compatible source code strings which can then be processed with external tools such as numpy or compiled as C/C++. For example, `foo.payload.page[2].widget_type == "fortytwo"` might translate to the somewhat less readable but faster `"(x[5] << 21) & 0x3f) == 42"`. That latter expression can filter millions of blocks per second, and the smaller result set can be conveniently processed in python. 
+
+If you need performance that exceeds typical C++, we can help. A proposed module combines the power of the btypes.expressions module with [bcolz](https://github.com/Blosc/bcolz), a column store that would be perfect for the task. The result would be queries compiled and executed by the bcolz parallel compute engine, applied to vertically compressed column data to minimize I/O overhead. Experiments indicate that the performance would far exceed brute force C++ code operating on uncompressed binary data. This would take about 40 hours of effort. Let me know if this is important to you. 
+
+```
+for quests in bcolz_data_source.query('quest', where='parrot.status=="dead"'):
+    ...
+```
 
 
 # Types, Fields, and Bound Fields
@@ -120,6 +127,8 @@ The expressions module allows you to translate expressions such as filters and r
 | *Interface* | a root field defined by a type (a special case of field) | named instance of a type allocated to offset 0, spanning the whole interface | `x = foo('x')` |
 | *Field* | defines the type, name, and offest of a range of bits in an interface. | named instance of a type allocated to an offset within an interface | `x.channel` |
 | *Bound Field* | A Field that is bound to a data source | instance of a field | `xdata = x(0x51e00034020039000023400020023)` |
+
+
 
 
 
