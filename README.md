@@ -113,7 +113,7 @@ The expressions module allows you to translate expressions such as filters and r
 If you need performance that exceeds typical C++, we can help. A proposed module combines the power of the btypes.expressions module with [bcolz](https://github.com/Blosc/bcolz), a column store that would be perfect for the task. The result would be queries compiled and executed by the bcolz parallel compute engine, applied to vertically compressed column data to minimize I/O overhead. Experiments indicate that the performance would far exceed brute force C++ code operating on uncompressed binary data. This would take about 40 hours of effort. Let me know if this is important to you. 
 
 ```
-for quests in bcolz_data_source.query('quest', where='parrot.status=="dead"'):
+for quest in bcolz_data_source.query('quest', where='parrot.status=="dead"'):
     ...
 ```
 
