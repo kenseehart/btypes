@@ -13,6 +13,9 @@ The expressions always represent a function of 'n', the raw interface record. If
 The expression may evaluate to either signed or unsigned integers. It is up to the client to choose appropriate type to consume the result.
 
 Although btypes has no third party requirements, the features supported by this submodule require libcst: pip install libcst
+
+Copyright 2020, Ken Seehart
+MIT License
 '''
 from typing import Callable
 

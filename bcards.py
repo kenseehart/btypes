@@ -1,9 +1,6 @@
 """
 Copyright 2020, Ken Seehart
-All rights reserved.
-
-License to Jon Shiell for research purposes only, subject to NDA.
-Commercial use prohibited.
+MIT License
 
 Cards implementation
 """
@@ -12,7 +9,7 @@ import random
 import unittest
 from typing import Union, Any
 
-from .btypes import enum, uint, field, bound_field, bslice
+from .btypes import enum, uint, meta_field, field, bslice
 
 class _card_t(uint):
     '''playing card'''
@@ -20,32 +17,32 @@ class _card_t(uint):
     def __init__(self):
         super().__init__(6, enum((r+s for r in '23456789TJQKA' for s in 'CHDS')))
 
-    def _allocate(self, name:str, parent=None, offset:int=0) -> field:
+    def allocate_(self, name:str, parent=None, offset:int=0) -> meta_field:
         '''allocate a field recursively'''
-        ftype = super()._allocate(name, parent, offset)
+        ftype = super().allocate_(name, parent, offset)
         
-        self._fields = (('rank', uint(4, enum('23456789TJQKA'))),
+        self.fields_ = (('rank', uint(4, enum('23456789TJQKA'))),
                         ('suit', uint(2, enum('CHDS'))),
                         )
         z = offset
 
-        for fname, ft in reversed(self._fields):
-            setattr(ftype, fname, ft._allocate(f'{name}.{fname}', ftype, z))
-            z += ft._size
+        for fname, ft in reversed(self.fields_):
+            setattr(ftype, fname, ft.allocate_(f'{name}.{fname}', ftype, z))
+            z += ft.size_
 
         return ftype
 
 card = _card_t()
 
 
-def shuffle(cards:bound_field) -> None:
+def shuffle(cards:field) -> None:
     a = list(map(int, cards))
     random.shuffle(a)
     # Naive in place sort, random.shuffle(deck), will not work correctly due to indirect reference of card fields.
-    cards._v = a
+    cards.v_ = a
 
-def sort(cards:bound_field) -> None:
-    cards._v = sorted(map(int, cards))
+def sort(cards:field) -> None:
+    cards.v_ = sorted(map(int, cards))
     
     
 class BCardsTest(unittest.TestCase):
@@ -59,7 +56,7 @@ class BCardsTest(unittest.TestCase):
                                 'JS', 'QC', 'QH', 'QD', 'QS', 'KC', 'KH', 'KD', 'KS', 'AC', 'AH', 'AD', 'AS'])
         
         # assign data from previously shuffled deck
-        deck._n = 206480033635037560160319767809886397911992016507243424853880220607585651965511326139019599053 
+        deck.n_ = 206480033635037560160319767809886397911992016507243424853880220607585651965511326139019599053 
         
         self.assertEqual(deck, ['2H', 'JH', '7S', '5D', 'AC', 'JD', 'KS', '6H', '9D', 'QD', '9C', '8H', '3S',
                                 '2D', '4S', 'AH', '7D', '4C', 'QS', 'TC', '5C', '7C', '8S', '3C', '6C', 'TD',
