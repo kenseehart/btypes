@@ -110,7 +110,7 @@ In `btypes`, performance is acheived by performing nearly all symbolic processin
 
 The expressions module allows you to translate expressions such as filters and rules into purely numerical bitwise expressions. These expressions behave in the same way as ordinary fields, so you can bind them to a data source. Also they can be rendered as C/C++/python compatible source code strings which can then be processed with external tools such as numpy or compiled as C/C++. For example, `foo.payload.page[2].widget_type == "fortytwo"` might translate to the somewhat less readable but faster `"(x[5] << 21) & 0x3f) == 42"`. That latter expression can filter millions of blocks per second, and the smaller result set can be conveniently processed in python. 
 
-If you need performance that exceeds typical C++, we can help. A proposed module combines the power of the btypes.expressions module with [bcolz](https://github.com/Blosc/bcolz), a column store that would be perfect for the task. The result would be queries compiled and executed by the bcolz parallel compute engine, applied to vertically compressed column data to minimize I/O overhead. Experiments indicate that the performance would far exceed brute force C++ code operating on uncompressed binary data. This would take about 40 hours of effort. Let me know if this is important to you. 
+If you need performance that exceeds typical C++, we can help. See [high performance query module](https://github.com/kenseehart/btypes/issues/2) This would take about 40 hours of effort, hopefully with the support of a patron. Let me know if this is important to you. 
 
 ```
 for quest in bcolz_data_source.query('quest', where='parrot.status=="dead"'):
