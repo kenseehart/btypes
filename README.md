@@ -94,7 +94,7 @@ The type of the `v_` attribute depends on the underlyting btype of the field.
 The btypes framework is extensible, the the following is not comprehensive.
 As a rule, the value type is always json compatible.
 
-| `x._btype` | `type(x.v_)` | details |
+| `x.btype_` | `type(x.v_)` | details |
 |--|--|--|
 | `uint(size)` | `int` | The size can be any positive integer number of bits |
 | `sint(size)` | `int` | |
