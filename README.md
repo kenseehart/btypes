@@ -88,7 +88,7 @@ Every field (including the entire interface) has the following read/write proper
 |--|--|
 | `n_` | The raw bits expressed as an int (unbounded size) |
 | `v_` | The data value expressed as basic types: int, float, str, list, dict |
-| `_json` | Same as `_v` expressed as a json string |
+| `json_` | Same as `v_` expressed as a json string |
 
 The type of the `v_` attribute depends on the underlyting btype of the field.
 The btypes framework is extensible, the the following is not comprehensive.
