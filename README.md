@@ -30,7 +30,7 @@ As the name suggests, some of concepts are inspired by ctypes. While there are s
 
 In C++, bit field allocation is implementation defined. Usually word boundaries are respected, and the total size of a structure is padded to a multiple of 8 bits. This is the primary reason why `ctypes` is not suitable for certain use cases for which `btypes` was designed, such as verilog interface testing, where explicit control of bit allocation is a requirement.
 
-In `btypes`, the size of a `struct` is the sum of the size of it's members, which are allocated consecutively without implicit padding. Fields may even straddle word boundaries. The intent is to give the programmer full control and predictability with respect to bit allocation. If you create an array of 7 7-bit integers, it will occupy 49. Philosophically, must ipso facto not be padded to 64 bits. `uint(7)[7]._size == 49`. Also, there is no upper bound on the size of a field.
+In `btypes`, the size of a `struct` is the sum of the size of it's members, which are allocated consecutively without implicit padding. Fields may even straddle word boundaries. The intent is to give the programmer full control and predictability with respect to bit allocation. If you create an array of 7 7-bit integers, it will occupy 49. Philosophically, must ipso facto not be padded to 64 bits. `uint(7)[7].size_ == 49`. Also, there is no upper bound on the size of a field.
 
 If this is not desired, it is up to the programmer to add padding as needed. Indeed, it would not be difficult to define a new btype class derived from `struct` and implement a different allocation scheme with padding.
 
@@ -67,9 +67,9 @@ def get_dead_parrot_quests(raw_data_source: Sequence[int]) -> Iterator[str]:
     status = data.parrot.status
     quest = data.quest
 
-    for data._n in raw_data_source:
+    for data.n_ in raw_data_source:
         if status == 'dead':
-            yield quest._json
+            yield quest.json_
             
 ```
 
@@ -86,15 +86,15 @@ Every field (including the entire interface) has the following read/write proper
 
 | attribute | description |
 |--|--|
-| `_n` | The raw bits expressed as an int (unbounded size) |
-| `_v` | The data value expressed as basic types: int, float, str, list, dict |
-| `_json` | Same as `_v` expressed as a json string |
+| `n_` | The raw bits expressed as an int (unbounded size) |
+| `v_` | The data value expressed as basic types: int, float, str, list, dict |
+| `json_` | Same as `v_` expressed as a json string |
 
-The type of the `_v` attribute depends on the underlyting btype of the field.
+The type of the `v_` attribute depends on the underlyting btype of the field.
 The btypes framework is extensible, the the following is not comprehensive.
 As a rule, the value type is always json compatible.
 
-| `x._btype` | `type(x._v)` | details |
+| `x.btype_` | `type(x.v_)` | details |
 |--|--|--|
 | `uint(size)` | `int` | The size can be any positive integer number of bits |
 | `sint(size)` | `int` | |
@@ -102,7 +102,7 @@ As a rule, the value type is always json compatible.
 | `struct((name, btype), ...)` | `dict` | values expanded recursively |
 | `array(elem_type, dim)` | `list` | alternate syntax: `elem_type[dim]` |
 
-When used directly, bound fields have duck-type behavior similar to their respective values, however it is important to keep in mind that fields are views of data. To access data properly, use the `_v` attribute.
+When used directly, bound fields have duck-type behavior similar to their respective values, however it is important to keep in mind that fields are views of data. To access data properly, use the `v_` attribute.
 
 # Performance
 
@@ -110,7 +110,7 @@ In `btypes`, performance is acheived by performing nearly all symbolic processin
 
 The expressions module allows you to translate expressions such as filters and rules into purely numerical bitwise expressions. These expressions behave in the same way as ordinary fields, so you can bind them to a data source. Also they can be rendered as C/C++/python compatible source code strings which can then be processed with external tools such as numpy or compiled as C/C++. For example, `foo.payload.page[2].widget_type == "fortytwo"` might translate to the somewhat less readable but faster `"(x[5] << 21) & 0x3f) == 42"`. That latter expression can filter millions of blocks per second, and the smaller result set can be conveniently processed in python. 
 
-If you need performance that exceeds typical C++, we can help. A proposed module combines the power of the btypes.expressions module with [bcolz](https://github.com/Blosc/bcolz), a column store that would be perfect for the task. The result would be queries compiled and executed by the bcolz parallel compute engine, applied to vertically compressed column data to minimize I/O overhead. Experiments indicate that the performance would far exceed brute force C++ code operating on uncompressed binary data. This would take about 40 hours of effort. Let me know if this is important to you. 
+If you need performance that exceeds typical C++, we can help. See [high performance query module](https://github.com/kenseehart/btypes/issues/2) This would take about 40 hours of effort, hopefully with the support of a patron. Let me know if this is important to you. 
 
 ```
 for quest in bcolz_data_source.query('quest', where='parrot.status=="dead"'):
@@ -118,17 +118,9 @@ for quest in bcolz_data_source.query('quest', where='parrot.status=="dead"'):
 ```
 
 
-# Types, Fields, and Bound Fields
+# Trailing Underscore Convention
 
+In order to give the developer full use of the field namespace, we distiguish fields from non-field attributes by marking the latter with a trailing underscore. For example, `foo.n_`, `foo.size_`. This means you should not define fields ending with `_`.
 
-| | description | metatype  | example |
-|--|--|--|--|
-| *Type* | defines the size, representation, and other properties of a unit of binary data. | derived from `btype` | `foo = struct(('channel', uint(3)), ('pages', page[4]))) `| 
-| *Interface* | a root field defined by a type (a special case of field) | named instance of a type allocated to offset 0, spanning the whole interface | `x = foo('x')` |
-| *Field* | defines the type, name, and offest of a range of bits in an interface. | named instance of a type allocated to an offset within an interface | `x.channel` |
-| *Bound Field* | A Field that is bound to a data source | instance of a field | `xdata = x(0x51e00034020039000023400020023)` |
-
-
-
-
+However, if you implement a custom type and you wish to define your own non-field attributes, please use a trailing underscore for that purpose.
 
