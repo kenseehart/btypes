@@ -263,21 +263,21 @@ class btype:
     
     def __call__(self, value:int=0) -> field:
         'Create a new bound interface from this btype'
-        mf = self.allocate_(self.name_)
-        f = mf()
+        ufield = self.allocate_(self.name_)
+        f = ufield()
         f.v_ = value
         return f
         
     def allocate_(self, name, parent:unbound_field=None, offset:int=0) -> field:
-        'allocate a meta_field of this btype, into the specified parent if specified, else allocate as the interface root'
-        mf = unbound_field(name, (type(self).mixin_field_,), {})
-        mf.parent_ = parent
-        mf.root_ = parent.root_ if parent else mf
-        mf.size_ = self.size_
-        mf.mask_ = ((1<<self.size_)-1)
-        mf.offset_ = offset
-        mf.btype_ = self
-        return mf
+        'allocate a unbound_field of this btype, into the specified parent if specified, else allocate as the interface root'
+        ufield = unbound_field(name, (type(self).mixin_field_,), {})
+        ufield.parent_ = parent
+        ufield.root_ = parent.root_ if parent else ufield
+        ufield.size_ = self.size_
+        ufield.mask_ = ((1<<self.size_)-1)
+        ufield.offset_ = offset
+        ufield.btype_ = self
+        return ufield
    
     def __repr__(self):
         return self.repr_
