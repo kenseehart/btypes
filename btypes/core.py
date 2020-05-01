@@ -1,20 +1,26 @@
 """
-btypes
+btypes.core
 
 A framework for packed binary data
 
 Copyright 2020, Ken Seehart
 MIT License
+https://github.com/kenseehart/btypes
 """
 
 
-
+import sys
 import unittest
 from typing import Union, Any, Callable
 from pprint import pprint as std_pprint
 import json
 
-from .expressions import CSTNode, cst_expr, cst_source_code, cst_uint
+from btypes.expressions import CSTNode, cst_expr, cst_source_code, cst_uint, is_identifier
+from btypes.numduck import IntDuck, NumDuck
+
+_all_above_excluded = set(locals().keys())
+
+# everything defined below this will be exported to the btypes package
 
 def enum(a:Union[list, str]) -> dict:
     '''return an enum_ dict given an iterable'''
@@ -30,7 +36,7 @@ def pprint(v):
     pretty print customized for btypes usage
     
     dictionaries keep original order (not sorted)
-    bound fields converted to value
+    bound fields are converted to value
     '''
     
     if isinstance(v, field):
@@ -39,188 +45,24 @@ def pprint(v):
     std_pprint(v, sort_dicts=False)
 
 
-
-class IntDuck:
-    '''Implement integer emulation. Define __int__() and IntDuck does the rest.
-    Integer behavior supercedes enum_, including ordering.
-    Not suitable for floating point
-    '''
+def field_method(f):
+    '''decorator that exposes a metaclass method to an instance of the class'''
+    f._is_field_method = True
+    return f
     
-    def __index__(self):
-        return int(self)
     
-    def __add__(self, other):
-        return int(self) + other
-
-    def __radd__(self, other):
-        return other + int(self)
-
-    def __iadd__(self, other):
-        self.n_ += other
-        return self
-
-    def __mul__(self, other):
-        return int(self) * other
-
-    def __rmul__(self, other):
-        return other * int(self)
-
-    def __imul__(self, other):
-        self.n_ = int(self) * other
-        return self
-
-    def __sub__(self, other):
-        return int(self) - other
-
-    def __rsub__(self, other):
-        return other - int(self)
-
-    def __isub__(self, other):
-        self.n_ -= other
-        return self
-
-    def __div__(self, other):
-        return int(self) / other
-
-    def __rdiv__(self, other):
-        return other / int(self)
-
-    def __floordiv__(self, other):
-        return int(self) // other
-
-    def __rfloordiv__(self, other):
-        return other // int(self)
-
-    def __ifloordiv__(self, other):
-        self.n_ = int(self) // other
-        return self    
-    
-    def __and__(self, other):
-        return self.n_ & other
-        
-    def __rand__(self, other):
-        return other & self.n_
-        
-    def __iand__(self, other):
-        self.n_ &= other
-        return self
-
-    def __or__(self, other):
-        return self.n_ | other
-        
-    def __ror__(self, other):
-        return other | self.n_
-
-    def __ior__(self, other):
-        self.n_ |= other
-        return self
-
-    def __rshift__(self, other):
-        return self.n_ >> other
-    
-    def __rrshift__(self, other):
-        return other >> self.n_ 
-    
-    def __irshift__(self, other):
-        self.n_ >>= other
-        return self
-    
-    def __lshift__(self, other):
-        return self.n_ << other
-    
-    def __rlshift__(self, other):
-        return other << self.n_ 
-    
-    def __ilshift__(self, other):
-        self.n_ <<= other
-        return self
-    
-    def __lt__(self, other):
-        return int(self) < int(other)
-
-    def __gt__(self, other):
-        return int(self) > int(other)
-    
-    def __le__(self, other):
-        return int(self) <= int(other)
-    
-    def __ge__(self, other):
-        return int(self) >= int(other)
-
-
-
-class NumDuck(IntDuck):
-    '''Implement numeric emulation, where self.v_ is expected to be numeric.
-    Not suitable for enums.
-    '''
-    
-    def __add__(self, other):
-        return self.v_ + other
-
-    def __radd__(self, other):
-        return other + self.v_
-
-    def __iadd__(self, other):
-        self.v_ += other
-        return self
-
-    def __mul__(self, other):
-        return self.v_ * other
-
-    def __rmul__(self, other):
-        return other * self.v_
-
-    def __imul__(self, other):
-        self.v_ *= other
-        return self
-
-    def __sub__(self, other):
-        return self.v_ - other
-
-    def __rsub__(self, other):
-        return other - self.v_
-
-    def __isub__(self, other):
-        self.v_ -= other
-        return self
-
-    def __div__(self, other):
-        return self.v_ / other
-
-    def __rdiv__(self, other):
-        return other / self.v_
-
-    def __idiv__(self, other):
-        self.v /= other
-        return self.v
-
-    def __floordiv__(self, other):
-        return self.v_ // other
-
-    def __rfloordiv__(self, other):
-        return other // self.v_
-
-    def __ifloordiv__(self, other):
-        self.v_ //= other
-        return self    
-    
-    def __lt__(self, other):
-        return self.v_ < other
-
-    def __gt__(self, other):
-        return self.v_ > other
-    
-    def __le__(self, other):
-        return self.v_ <= other
-    
-    def __ge__(self, other):
-        return self.v_ >= other
-
-class meta_field(type):
+class unbound_field(type):
     '''Unbound field implementing propery protocol'''
+    
+    def __init__(self, name, bases, dict_):
+        super().__init__(name, bases, dict_)
+        for k, f in type(self).__dict__.items():
+            if getattr(f, '_is_field_method', False):
+                setattr(self, k, f)
+        
 
     def __repr__(self):
-        return self.__name__
+        return f'<unbound_field: {self.__name__}>'
 
     def __bool__(self):
         return True
@@ -284,6 +126,7 @@ class meta_field(type):
     def this_(self):
         return self
     
+    @field_method
     def cst_(self, expr: str='', word_size: int=0) -> CSTNode:
         '''Return a CSTNode for this field, or an expression  
         '''
@@ -296,9 +139,11 @@ class meta_field(type):
             return cst_expr(expr, resolver, word_size)
             
     
+    @field_method
     def expr_(self, expr: str='', word_size: int=0) -> str:
         return cst_source_code(self.cst_(expr, word_size))
 
+    @field_method
     def expr_field_(self, expr: str, word_size: int=0) -> str:
         cst = self.cst_(expr, word_size)
         src = cst_source_code(cst)
@@ -311,19 +156,18 @@ class meta_field(type):
     
 
 
-class field(IntDuck, metaclass=meta_field):
+class field(IntDuck, metaclass=unbound_field):
     '''Bound field'''
     offset_:int
     mask_:int
     __slots__ = ('target_',)
     
-    def __init__(self, target=0):
+    def __init__(self, target_field:'field' = None):
         '''bind a field to a target list consisting of a single integer'''
-        if isinstance(target, field):
-            self.target_ = target.target_
+        if target_field is not None:
+            self.target_ = target_field.target_
         else:
             self.target_ = [0]
-            self.v_ = target
         
     def __repr__(self):
         return f'<{repr(self.v_)}>'
@@ -406,32 +250,34 @@ class field(IntDuck, metaclass=meta_field):
             raise KeyError(msg)
 
     def __getattr__(self, k):
-        return getattr(self.btype_, k)
-
+        try:
+            return getattr(self.btype_, k)
+        except AttributeError as e:
+            raise AttributeError(f"'{self.name_}' field has no attribute '{k}'") from e
+    
 class btype:
     '''Base class for type classes'''
     repr_:str
     size_:int
     dim_:int = None
     
-    def __call__(self, name:str, value:Any=None) -> meta_field:
-        mf = self.allocate_(name)
-        if value is None:
-            return mf
-        else:
-            f = mf([0])
-            f.v_ = value
-            return f
+    def __call__(self, value:int=0) -> field:
+        'Create a new bound interface from this btype'
+        mf = self.allocate_(self.name_)
+        f = mf()
+        f.v_ = value
+        return f
         
-    def allocate_(self, name, parent:meta_field=None, offset:int=0) -> field:
-        ftype = meta_field(name, (type(self).mixin_field_,), {})
-        ftype.parent_ = parent
-        ftype.root_ = parent.root_ if parent else ftype
-        ftype.size_ = self.size_
-        ftype.mask_ = ((1<<self.size_)-1)
-        ftype.offset_ = offset
-        ftype.btype_ = self
-        return ftype
+    def allocate_(self, name, parent:unbound_field=None, offset:int=0) -> field:
+        'allocate a meta_field of this btype, into the specified parent if specified, else allocate as the interface root'
+        mf = unbound_field(name, (type(self).mixin_field_,), {})
+        mf.parent_ = parent
+        mf.root_ = parent.root_ if parent else mf
+        mf.size_ = self.size_
+        mf.mask_ = ((1<<self.size_)-1)
+        mf.offset_ = offset
+        mf.btype_ = self
+        return mf
    
     def __repr__(self):
         return self.repr_
@@ -442,11 +288,12 @@ class btype:
 class uint(btype):
     '''unsigned integer with optional enum'''
 
-    def __init__(self, size:int, enum_=None):
+    def __init__(self, size:int, enum_:dict = None, name_:str = None):
         self.size_ = size
         self.repr_ = f"uint({size})"
         self.enum_ = enum_ or {}
         self.renum_ = {v:k for k,v in self.enum_.items()}
+        self.name_ = name_ or f'{type(self).__name__}{size}'
         
     class mixin_field_(field):
         @property
@@ -500,6 +347,7 @@ class decimal(sint):
         self.repr_ = f"decimal({size, e})"
         self.max_ = ((1<<size)-1)/self.divisor_
         self.min_ = -self.max_
+        self.name_ = type(self).__name__
 
     class mixin_field_(NumDuck, sint.mixin_field_):
         def __int__(self):
@@ -526,17 +374,21 @@ class decimal(sint):
 
 
 class struct(btype):
-    def __init__(self, *fields):
-        self.fields_ = fields
-        self.size_ = sum(f.size_ for _,f in fields)
-        self.repr_ = f"struct{fields}"
+    def __init__(self, name_:str = None, fields_:list = None, **fields):
+        self.name_ = name_ or type(self).__name__
+        self.fields_ = (fields_ or list()) + list(fields.items())
+        self.size_ = sum(f.size_ for _,f in self.fields_)
+        self.repr_ = f"struct(name_='{self.name_}', fields_={fields})"
         
-    def allocate_(self, name:str='_root', parent:meta_field=None, offset:int=0) -> meta_field:
+    def allocate_(self, name:str='_root', parent:unbound_field=None, offset:int=0) -> unbound_field:
         '''allocate a field recursively'''
         ftype = super().allocate_(name, parent, offset)
         z = offset
 
         for fname, ft in reversed(self.fields_):
+            if fname.endswith('_'):
+                raise ValueError(f'Field names must not end with _: {fname}')
+            
             setattr(ftype, fname, ft.allocate_(f'{name}.{fname}', ftype, z))
             z += ft.size_
 
@@ -564,10 +416,17 @@ class struct(btype):
                 yield k
 
         def __getitem__(self, k):
-            try:
-                return getattr(self, k)
-            except AttributeError as e:
-                raise KeyError(f'{type(self)} does not have field "{k}"') from e
+            if isinstance(k, str):
+                try:
+                    return getattr(self, k)
+                except AttributeError as e:
+                    if is_identifier(k):
+                        raise KeyError(f'{type(self)} does not have field "{k}"') from e
+
+                f=self.expr_field_(k)(self)
+                return f
+            else:
+                raise TypeError(f'{k.btype_.__name__} fields do not support {type(k).__name__} indices')
 
 class array(struct):
     '''array'''
@@ -578,6 +437,7 @@ class array(struct):
         self.size_ = etype.size_*dim
         self.repr_ = f"{etype}[{dim}]"
         self.fields_ = tuple((f'_{i}',  etype) for i in range(dim))
+        self.name_ = type(self).__name__
         
     class mixin_field_(struct.mixin_field_):
         @property
@@ -623,8 +483,9 @@ class bslice(array):
         self.dim_ = len(self.islice_)
         self.size_ = self.etype_.size_*self.dim_
         self.repr_ = f"{atype}[{aslice}]"
+        self.name_ = type(self).__name__
 
-    def allocate_(self, name:str, parent:meta_field, offset:int=0) -> meta_field:
+    def allocate_(self, name:str, parent:unbound_field, offset:int=0) -> unbound_field:
         '''allocate a field recursively'''
         ftype = btype.allocate_(self, name, parent, offset)
 
@@ -640,6 +501,7 @@ class fn_type(btype):
         self.fn_ = fn
         self.size_ = 0
         self.repr_ = f"fn_type({fn})"        
+        self.name_ = type(self).__name__
 
         
     class mixin_field_(field):
@@ -652,17 +514,13 @@ class fn_type(btype):
             return int(self.v_)
 
 
-
-
 class BTypesTest(unittest.TestCase):
     def test_simple(self):
         u4t = uint(4) # type
-        u4i = u4t('u4i') # interface (unbound field)
-        u4 = u4i() # bound field
+        u4 = u4t() # bound field
         u4.n_ = 3 # raw int value
 
         self.assertEqual(repr(u4t), 'uint(4)')
-        self.assertEqual(repr(u4i), 'u4i')
         self.assertEqual(repr(u4), '<3>')
         self.assertEqual(u4.n_, 3)
         self.assertEqual(u4, 3)
@@ -678,23 +536,23 @@ class BTypesTest(unittest.TestCase):
         
         
     def test_struct(self):
-        foo = struct(
+        foo = struct(fields_=[
             ("a", uint(3)),
             ("b", uint(4)),
-        )
+        ])
         
         bar = struct(
-            ("f", foo), # array of 10 foo elements
-            ("c", uint(5)),
+            f = foo, # array of 10 foo elements
+            c = uint(5),
         )
         
         foobar = struct(
-            ("a", uint(3, enum_={"alpha":0, "beta":1, "gamma":2})),  # 3 bit integer with enum
-            ("b", sint(4)), # 4 bit integer
-            ("bars", bar[5]), # array of 5 bars
+            a = uint(3, enum_={"alpha":0, "beta":1, "gamma":2}),  # 3 bit integer with enum
+            b = sint(4), # 4 bit integer
+            bars = bar[5], # array of 5 bars
         )
         
-        f = foobar('f')(0)
+        f = foobar(0)
         f.a = 'beta'
         f.b = -1
         print (f"f['b'] = {f['b']}")
@@ -708,29 +566,32 @@ class BTypesTest(unittest.TestCase):
             f.c
         
     def test_decimal(self):
-        foo = decimal(16, 2)('foo')(123.45)
+        foo = decimal(16, 2)(123.45)
         
         self.assertEqual(foo, 123.45)
+        self.assertEqual(foo.n_, 12345)
         self.assertEqual(foo+1.0, 124.45)
 
     def test_expr(self):
-        foo = struct(
-            ("a", uint(3)),
-            ("b", uint(4)),
-        )('foo')
+        foo = struct('foo',
+            a = uint(3),
+            b = uint(4),
+        )()
         
         self.assertEqual(foo.a.expr_(), '(n >> 4 & 0x7)')
         self.assertEqual(foo.b.expr_(), '(n & 0xf)')
         
-        foo.ab = foo.expr_field_('a * b')
+        ab = foo['a * b']
         
-        fd = foo(0xffff)
+        foo.a = 5
+        foo.b = 11
         
-        ab = fd.ab
-        self.assertEqual(ab, 105)
+        self.assertEqual(foo.a, 5)
+        self.assertEqual(ab, 55)
         
-        self.assertEqual(fd.ab.expr_(), '(n >> 4 & 0x7) * (n & 0xf)')
-        self.assertEqual(foo.ab.expr_(), '(n >> 4 & 0x7) * (n & 0xf)')
+        self.assertEqual(ab.expr_(), '(n >> 4 & 0x7) * (n & 0xf)')
+        self.assertEqual(ab.expr_(), '(n >> 4 & 0x7) * (n & 0xf)')
         
 
 
+__all__ = list(set([x for x in locals().keys() if not x.startswith('_')]) - _all_above_excluded)

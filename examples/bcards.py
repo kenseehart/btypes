@@ -1,15 +1,15 @@
 """
+Playing Cards implementation using btypes
+
 Copyright 2020, Ken Seehart
 MIT License
-
-Cards implementation
+https://github.com/kenseehart/btypes
 """
 
 import random
 import unittest
-from typing import Union, Any
 
-from .btypes import enum, uint, meta_field, field, bslice
+from btypes import enum, uint, unbound_field, field
 
 class _card_t(uint):
     '''playing card'''
@@ -17,7 +17,7 @@ class _card_t(uint):
     def __init__(self):
         super().__init__(6, enum((r+s for r in '23456789TJQKA' for s in 'CHDS')))
 
-    def allocate_(self, name:str, parent=None, offset:int=0) -> meta_field:
+    def allocate_(self, name:str, parent=None, offset:int=0) -> unbound_field:
         '''allocate a field recursively'''
         ftype = super().allocate_(name, parent, offset)
         

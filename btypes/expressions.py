@@ -1,4 +1,4 @@
-'''Support for high-performance expression processing
+'''btypes.expressions: Support for high-performance expression processing
 
 The core btypes model is based on python's unbound integers, so by design there is intentionally no concept of word size. However, the rest of the world deals in 32 bit and 64 bit integers.
 
@@ -14,9 +14,12 @@ The expression may evaluate to either signed or unsigned integers. It is up to t
 
 Although btypes has no third party requirements, the features supported by this submodule require libcst: pip install libcst
 
+
 Copyright 2020, Ken Seehart
 MIT License
+https://github.com/kenseehart/btypes
 '''
+
 from typing import Callable
 
 from libcst import *
@@ -131,6 +134,10 @@ def cst_expr(expr: str, resolver: Callable[[str], CSTNode], word_size: int=0) ->
     new_cst = cst.visit(visitor)
     return new_cst
    
+def is_identifier(expr):
+    cst = parse_expression(expr)
+    return isinstance(cst, Name)
+    
     
 def cst_source_code(cst: CSTNode) -> str:
     '''return source code for a node'''
