@@ -1,3 +1,4 @@
 
 *.pyc
 btypes.wpu
+.DS_Store
