@@ -18,13 +18,16 @@ A vis-a-vis its entity, d'you see?
 
 # Comparison to [ctypes](https://docs.python.org/3/library/ctypes.html)
 
-As the name suggests, some of concepts are inspired by ctypes. While there are similarities, the primary purpose is different.
+As the name suggests, some of concepts are inspired by ctypes. While there are similarities, the primary purpose is different. Both btypes and ctypes are able to easily encode/decode binary data such as c structs without a generated wrapper.
 
-| **tool** | **primary purpose** | **implementation** |
-|----|--------|-------|
-| ctypes | interface with C/C++ code, model C/C++ datatypes | python, C++ |
-| btypes | model arbitary bit alligned datatypes and interfaces | python |
+| **tool** | **model** | **primary purpose** | **implementation** |
+|----|--------|---|----|
+| ctypes | C/C++ types | interface with C/C++ code, model C/C++ datatypes | python, C++ |
+| btypes | bit fields | model arbitary bit alligned datatypes and interfaces | python |
 
+* Use ctypes if you need to interface with C/C++ code.
+* Use btypes if you need to have full control over a bit aligned binary protocol.
+* Use both ctypes and btypes if you need both. The can work together.
 
 # Difference between btypes fields and C++ bit fields
 
