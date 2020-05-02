@@ -31,11 +31,14 @@ As the name suggests, some of concepts are inspired by ctypes. While there are s
 
 # Difference between btypes fields and C++ bit fields
 
-In C++, bit field allocation is implementation defined. Usually word boundaries are respected, and the total size of a structure is padded to a multiple of 8 bits. This is the primary reason why `ctypes` is not suitable for certain use cases for which `btypes` was designed, such as verilog interface testing, where explicit control of bit allocation is a requirement.
+The python `int` type efficiently implements a bit field of unbounded size. Btypes leverages this abstraction for raw binary data rather than the more conventional use of `bytes`. Because of this, byte misalignment issues do not add any expressive complexity. A field of any size or alignment can be extracted with a `shift-and` operation, and written with `shift-or`.
 
-In `btypes`, the size of a `struct` is the sum of the size of it's members, which are allocated consecutively without implicit padding. Fields may even straddle word boundaries. The intent is to give the programmer full control and predictability with respect to bit allocation. If you create an array of 7 7-bit integers, it will occupy 49. Philosophically, must ipso facto not be padded to 64 bits. `uint(7)[7].size_ == 49`. Also, there is no upper bound on the size of a field.
+In C++, bit field allocation is implementation defined. Usually word boundaries are respected, and the total size of a structure is usually implicitly padded to a multiple of 8 bits. This is the primary reason why `ctypes` is not suitable for certain use cases for which `btypes` was designed, such as verilog interface testing, where explicit control of bit allocation is a requirement.
 
-If this is not desired, it is up to the programmer to add padding as needed. Indeed, it would not be difficult to define a new btype class derived from `struct` and implement a different allocation scheme with padding.
+In `btypes`, the size of a `struct` is simply the sum of the size of it's members, which are allocated consecutively without implicit padding. Fields may even straddle word boundaries. The intent is to give the programmer full control and predictability with respect to bit allocation. If you allocate an array of 7 7-bit integers, it will occupy precisely 49 bits: `uint(7)[7].size_ == 49`. Also, there is no upper bound on the size of a field.
+
+Although it can be argued that byte/word alignment is usually a good idea, `btypes` is intentionally agnostic about such things, and gives complete control over alignment policies to the developer. However, if desired, it would not be difficult to implement a custom allocation policy to add padding as needed.
+
 
 # Ease of use
 
