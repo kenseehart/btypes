@@ -47,20 +47,20 @@ Although it can be argued that byte/word alignment is usually a good idea, `btyp
 raw_data_source = sequence_of_integers_from_somewhere()
 
 parrot_struct = struct(
-    ('status', uint(2, enum={'dead': 0, 'pining': 1, 'resting': 2}),
-    ('plumage_rgb', uint(5)[3]),
+    status = uint(2, enum={'dead': 0, 'pining': 1, 'resting': 2},
+    plumage_rgb = uint(5)[3],
 ) 
 
 knight_struct = struct(
-    ('name', uint(7)[20]),
-    ('cause_of_death', uint(3, enum={'vorpal_bunny':0, 'liverectomy':1, 'ni':2, 'question':3, 'gourd':4}),
+    name = uint(7)[20],
+    cause_of_death = uint(3, enum={'vorpal_bunny':0, 'liverectomy':1, 'ni':2, 'question':3, 'gourd':4},
 )
 
 quest_struct = struct(
-    ('type', uint(3, enum={'grail':0, 'shrubbery':1, 'meaning':2, 'larch':3, 'gourd':4}),
-    ('knights', knight_struct[10]),
-    ('holy', uint(1)),
-    ('parrot', parrot_struct),
+    type = uint(3, enum={'grail':0, 'shrubbery':1, 'meaning':2, 'larch':3, 'gourd':4},
+    knights = knight_struct[10],
+    holy = uint(1),
+    parrot = parrot_struct,
 )
 
 
