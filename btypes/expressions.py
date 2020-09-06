@@ -1,18 +1,30 @@
 '''btypes.expressions: Support for high-performance expression processing
 
-The core btypes model is based on python's unbound integers, so by design there is intentionally no concept of word size. However, the rest of the world deals in 32 bit and 64 bit integers.
+The core btypes model is based on python's unbound integers, so by design there
+is intentionally no concept of word size. However, the rest of the world deals
+in 32 bit and 64 bit integers.
 
-The primary purpose of the expressions module is to interface with tools built on C/C++, etc., where wide interface data are typically expressed as an array of native integers.
+The primary purpose of the expressions module is to interface with tools built
+on C/C++, etc., where wide interface data are typically expressed as an array
+of native integers.
 
-The expressions provided by this module are valid syntax in C/C++ as well as python, and can be used in numpy, scipy, and related tools, or to generate C/C++ code directly.
+The expressions provided by this module are valid syntax in C/C++ as well as
+python, and can be used in numpy, scipy, and related tools, or to generate
+C/C++ code directly.
 
-Also, within pure python, expressions can be recompiled as closed form bitwise expressions on unbounded integers for improved performance. Use default word_size=0 for unbounded integers.
+Also, within pure python, expressions can be recompiled as closed form bitwise
+expressions on unbounded integers for improved performance. Use default
+word_size=0 for unbounded integers.
 
-The expressions always represent a function of 'n', the raw interface record. If word_size==0, n is int, not divided into words. If word_size>0, n is int[], an array of unsigned integers of the specified size.
+The expressions always represent a function of 'n', the raw interface record.
+If word_size==0, n is int, not divided into words. If word_size>0, n is int[],
+an array of unsigned integers of the specified size.
 
-The expression may evaluate to either signed or unsigned integers. It is up to the client to choose appropriate type to consume the result.
+The expression may evaluate to either signed or unsigned integers. It is up
+to the client to choose appropriate type to consume the result.
 
-Although btypes has no third party requirements, the features supported by this submodule require libcst: pip install libcst
+Although btypes has no third party requirements, the features supported by
+this submodule require libcst: pip install libcst
 
 
 Copyright 2020, Ken Seehart

@@ -20,7 +20,7 @@ from btypes.numduck import IntDuck, NumDuck
 
 _all_above_excluded = set(locals().keys())
 
-# everything defined below this will be exported to the btypes package
+# everything defined below this will be exported to the btypes package unless startswith('_')
 
 def enum(a:Union[list, str]) -> dict:
     '''return an enum_ dict given an iterable'''
@@ -332,19 +332,24 @@ class sint(uint):
             return v
         
         
-
-class decimal(sint):
-    '''fixed point decimal encoded as signed integer
+class fixed(sint):
+    '''fixed point encoded as signed integer with const divisor
     
-    decimal(16, 2) = 16 bits, 2 decimal places (-655.35 <= v <= 655.36)
-    decoded values (self.v_) are float
+    A divisor is sufficient to generalize fixed point.
+    For clarity, we specify precision and base, where divisor = base**precision
+    
+    size = total number of bits
+    precision = number of fractional digits
+    base = base of digits
+    
     '''
 
-    def __init__(self, size:int, e:int):
-        self.e_ = e
-        self.divisor_ = 10**e
+    def __init__(self, size:int, precision: int, base:int):
+        self.precision_ = precision
+        self.base_ = base
+        self.divisor_ = base**precision
         self.size_ = size
-        self.repr_ = f"decimal({size, e})"
+        self.repr_ = f"fixed({size, precision, base})"
         self.max_ = ((1<<size)-1)/self.divisor_
         self.min_ = -self.max_
         self.name_ = type(self).__name__
@@ -364,13 +369,27 @@ class decimal(sint):
             return float(self)
             
         @v_.setter        
-        def v_(self, v:float):
+        def v_(self, v:float):    
             try:
                 if v<self.min_ or v>self.max_:
                     raise ValueError(f'{type(self).desc_}: value {v} out of range {self.min_} <= value <= {self.max_}')
             except TypeError as e:
                 raise TypeError(f"{type(self).desc_} doesn't support assignment of {type(v)}")
             self.n_ = int(v*self.divisor_)
+
+
+
+class decimal(fixed):
+    '''fixed point decimal encoded as signed integer
+    
+    decimal(16, 2) = 16 bits, 2 decimal places (-655.35 <= v <= 655.36)
+    decoded values (self.v_) are float
+    '''
+
+    def __init__(self, size:int, precision:int):
+        super().__init__(size, precision, 10)
+        self.repr_ = f"decimal({size, precision})"
+
 
 
 class struct(btype):
@@ -592,6 +611,7 @@ class BTypesTest(unittest.TestCase):
         self.assertEqual(ab.expr_(), '(n >> 4 & 0x7) * (n & 0xf)')
         self.assertEqual(ab.expr_(), '(n >> 4 & 0x7) * (n & 0xf)')
         
+
 
 
 __all__ = list(set([x for x in locals().keys() if not x.startswith('_')]) - _all_above_excluded)
