@@ -29,6 +29,12 @@ As the name suggests, some of concepts are inspired by ctypes. While there are s
 * Use btypes if you need to have full control over a bit aligned binary protocol.
 * Use both ctypes and btypes if you need both. The can work together.
 
+# Comparison to bitfields in C++
+
+Unfortunately, the core philosophy of C is that the language ultimately decides how to allocate bits for optimal performance, and the language thinks it knows better than you how to do this, such as respecting byte or word boundaries. If you have a good reason to control bit alignment, you have to write methods to explicitly extract the desired bits. So bitfields in C are inadequate if you want to really control bitwise allocation and have predictable results, such as assuming the size in bits of a struct is the sum of the sizes of it's members. This level of control is relevant for things like protocol implementations and verilog. Now with `btypes`, bitfields behave the way you expect them to work.
+
+In other words, `btypes` prioritizes detailed control over optimization and it does not respect word or byte boundaries. A struct with a 5 bit integer and a 13 bit integer is an 18 bit struct. Of course if you choose to design your structures to respect word boundaries, there may be use cases where doing so can improve performance, but that's entirely up to you.
+
 # Difference between btypes fields and C++ bit fields
 
 The python `int` type efficiently implements a bit field of unbounded size. Btypes leverages this abstraction for raw binary data rather than the more conventional use of `bytes`. Because of this, byte misalignment issues do not add any expressive complexity. A field of any size or alignment can be extracted with a `shift-and` operation, and written with `shift-or`.
