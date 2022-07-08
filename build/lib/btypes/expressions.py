@@ -1,32 +1,19 @@
 '''btypes.expressions: Support for high-performance expression processing
 
-The core btypes model is based on python's unbound integers, so by design there
-is intentionally no concept of word size. However, the rest of the world deals
-in 32 bit and 64 bit integers.
+The core btypes model is based on python's unbound integers, so by design there is intentionally no concept of word size. However, the rest of the world deals in 32 bit and 64 bit integers.
 
-The primary purpose of the expressions module is to interface with tools built
-on C/C++, etc., where wide interface data are typically expressed as an array
-of native integers.
+The primary purpose of the expressions module is to interface with tools built on C/C++, etc., where wide interface data are typically expressed as an array of native integers.
 
-The expressions provided by this module are valid syntax in C/C++ as well as
-python, and can be used in numpy, scipy, and related tools, or to generate
-C/C++ code directly.
+The expressions provided by this module are valid syntax in C/C++ as well as python, and can be used in numpy, scipy, and related tools, or to generate C/C++ code directly.
 
-Also, within pure python, expressions can be recompiled as closed form bitwise
-expressions on unbounded integers for improved performance. Use default
-word_size=0 for unbounded integers.
+Also, within pure python, expressions can be recompiled as closed form bitwise expressions on unbounded integers for improved performance. Use default word_size=0 for unbounded integers.
 
-The expressions always represent a function of 'n', the raw interface record.
-If word_size==0, n is int, not divided into words. If word_size>0, n is int[],
-an array of unsigned integers of the specified size.
+The expressions always represent a function of 'n', the raw interface record. If word_size==0, n is int, not divided into words. If word_size>0, n is int[], an array of unsigned integers of the specified size.
 
-The expression may evaluate to either signed or unsigned integers. It is up
-to the client to choose appropriate type to consume the result.
+The expression may evaluate to either signed or unsigned integers. It is up to the client to choose appropriate type to consume the result.
 
-Although btypes has no third party requirements, the features supported by
-this submodule require libcst: pip install libcst
+Although btypes has no third party requirements, the features supported by this submodule require libcst: pip install libcst
 
-libcst: pip install libcst
 
 Copyright 2020, Ken Seehart
 MIT License
@@ -35,7 +22,7 @@ https://github.com/kenseehart/btypes
 
 from typing import Callable
 
-from libcst import CSTNode, Integer, Subscript, BinaryOperation, RightShift, CSTTransformer, parse_expression, Name, BitAnd, Integer, LeftParen, RightParen, Module
+from libcst import *
 
 def cst_ni(i: int) -> CSTNode:
     '''
@@ -90,7 +77,7 @@ def cst_uint(offset: int, mask: int, word_size: int=0) -> CSTNode:
 
     :param offset: bit offset
     :param mask: bit mask
-    :param word_size: native word size in bits (default 0 = unlimited, suitable for native python)
+    :param word_size: native word size in bits (default 0 means unlimited size, suitable for python expressions)
 
     example: ((n[5]>>7)&0x3f)
     '''
@@ -107,11 +94,11 @@ def cst_uint(offset: int, mask: int, word_size: int=0) -> CSTNode:
             n0 = cst_shift_and(cst_ni(j), k)
             n1 = cst_shift_and(cst_ni(j), 0, mask)
             return cst_or(n0, n1)
-
-        return cst_shift_and(cst_ni(j), offset, mask)
+        else:
+            return cst_shift_and(cst_ni(j), offset, mask)
     else:
         return cst_shift_and(Name(value='n'), offset, mask)
-
+    
 
 class NameTransformer(CSTTransformer):
     def __init__(self, resolver:Callable[[str], CSTNode]):
@@ -138,23 +125,23 @@ def cst_expr(expr: str, resolver: Callable[[str], CSTNode], word_size: int=0) ->
 
     :param str: expression in field namespace to be translated
     :param resolver: callback function to evaluate a name as a CSTNode
-    :param word_size: native word size in bits (default 0 = unlimited, suitable for native python)
+    :param word_size: native word size in bits (default 0 means unlimited size, suitable for python expressions)
 
     '''
-
+    
     cst = parse_expression(expr)
     visitor = NameTransformer(resolver)
     new_cst = cst.visit(visitor)
     return new_cst
-
+   
 def is_identifier(expr):
     cst = parse_expression(expr)
     return isinstance(cst, Name)
-
-
+    
+    
 def cst_source_code(cst: CSTNode) -> str:
     '''return source code for a node'''
     return Module(body=[cst]).code
 
 
-
+    

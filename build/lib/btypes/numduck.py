@@ -7,17 +7,16 @@ Copyright 2020, Ken Seehart
 MIT License
 """
 
+
 class IntDuck:
-    '''Abstract class mplements integer emulation where virtual n_ is the integer representation.
-    Define __int__() and IntDuck does the rest.
-    Integer behavior supercedes enum_ if defined, including ordering.
+    '''Implement integer emulation. Define __int__() and IntDuck does the rest.
+    Integer behavior supercedes enum_, including ordering.
     Not suitable for floating point
     '''
-    n_: int
-
+    
     def __index__(self):
         return int(self)
-
+    
     def __add__(self, other):
         return int(self) + other
 
@@ -62,21 +61,21 @@ class IntDuck:
 
     def __ifloordiv__(self, other):
         self.n_ = int(self) // other
-        return self
-
+        return self    
+    
     def __and__(self, other):
         return self.n_ & other
-
+        
     def __rand__(self, other):
         return other & self.n_
-
+        
     def __iand__(self, other):
         self.n_ &= other
         return self
 
     def __or__(self, other):
         return self.n_ | other
-
+        
     def __ror__(self, other):
         return other | self.n_
 
@@ -86,45 +85,43 @@ class IntDuck:
 
     def __rshift__(self, other):
         return self.n_ >> other
-
+    
     def __rrshift__(self, other):
-        return other >> self.n_
-
+        return other >> self.n_ 
+    
     def __irshift__(self, other):
         self.n_ >>= other
         return self
-
+    
     def __lshift__(self, other):
         return self.n_ << other
-
+    
     def __rlshift__(self, other):
-        return other << self.n_
-
+        return other << self.n_ 
+    
     def __ilshift__(self, other):
         self.n_ <<= other
         return self
-
+    
     def __lt__(self, other):
         return int(self) < int(other)
 
     def __gt__(self, other):
         return int(self) > int(other)
-
+    
     def __le__(self, other):
         return int(self) <= int(other)
-
+    
     def __ge__(self, other):
         return int(self) >= int(other)
 
 
 
 class NumDuck(IntDuck):
-    '''Abstract class implements numeric emulation, where virtual self.v_ is expected to be numeric.
+    '''Implement numeric emulation, where self.v_ is expected to be numeric.
     Not suitable for enums.
     '''
-
-    v_: float
-
+    
     def __add__(self, other):
         return self.v_ + other
 
@@ -162,8 +159,8 @@ class NumDuck(IntDuck):
         return other / self.v_
 
     def __idiv__(self, other):
-        self.v_ /= other
-        return self.v_
+        self.v /= other
+        return self.v
 
     def __floordiv__(self, other):
         return self.v_ // other
@@ -173,17 +170,17 @@ class NumDuck(IntDuck):
 
     def __ifloordiv__(self, other):
         self.v_ //= other
-        return self
-
+        return self    
+    
     def __lt__(self, other):
         return self.v_ < other
 
     def __gt__(self, other):
         return self.v_ > other
-
+    
     def __le__(self, other):
         return self.v_ <= other
-
+    
     def __ge__(self, other):
         return self.v_ >= other
 
