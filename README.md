@@ -14,7 +14,7 @@ But half the bee has got to be
 
 A vis-a-vis its entity, d'you see?
 
--- *John Cleese*
+-- *John Cleese*  https://www.youtube.com/watch?v=ftomw87g61Y
 
 # Comparison to [ctypes](https://docs.python.org/3/library/ctypes.html)
 
@@ -133,4 +133,11 @@ for quest in bcolz_data_source.query('quest', where='parrot.status=="dead"'):
 In order to give the developer full use of the field namespace, we distiguish fields from non-field attributes by marking the latter with a trailing underscore. For example, `foo.n_`, `foo.size_`. This means you should not define fields ending with `_`.
 
 However, if you implement a custom type and you wish to define your own non-field attributes, please use a trailing underscore for that purpose.
+
+# Metatypes, field types, and fields
+
+It's important when using btypes to have a clear understanding of levels of types. So, for example, `uint` is a metatype which you instantiate to get a field type, so `uint(5)` is a 5 bit unsigned integer field type (as opposed to an unsigned integer with a value of 5). You instantiate a field type to get a field, e.g. `x = uint(5)()`, and then assign values to the field via the `x.v_` or `x.n_` attributes.
+
+
+
 
