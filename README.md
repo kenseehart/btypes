@@ -57,7 +57,7 @@ parrot_struct = struct(
 
 knight_struct = struct(
     name = uint(7)[20],
-    cause_of_death = uint(3, enum={'vorpal_bunny':0, 'liverectomy':1, 'ni':2, 'question':3, 'gourd':4},
+    cause_of_death = uint(3, enum={'vorpal_bunny':0, 'liverectomy':1, 'ni':2, 'question':3, 'mint':4},
 )
 
 quest_struct = struct(
