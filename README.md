@@ -50,36 +50,39 @@ Although it can be argued that byte/word alignment is usually a good idea, `btyp
 
 raw_data_source = sequence_of_integers_from_somewhere()
 
-parrot_struct = struct(
-    status = uint(2, enum={'dead': 0, 'pining': 1, 'resting': 2},
-    plumage_rgb = uint(5)[3],
-) 
+parrot_struct = struct('parrot_struct', [
+    ('status', uint(2, enum_={'dead': 0, 'pining': 1, 'resting': 2})),
+    ('plumage_rgb', uint(5)[3]),
+])
 
-knight_struct = struct(
-    name = uint(7)[20],
-    cause_of_death = uint(3, enum={'vorpal_bunny':0, 'liverectomy':1, 'ni':2, 'question':3, 'gourd':4},
-)
+knight_struct = struct('knight_struct', [
+    ('name', uint(7)[20]),
+    ('cause_of_death', uint(3, enum_=
+        {'vorpal_bunny':0, 'liverectomy':1, 'ni':2, 'question':3, 'mint':4})),
+])
 
-quest_struct = struct(
-    type = uint(3, enum={'grail':0, 'shrubbery':1, 'meaning':2, 'larch':3, 'gourd':4},
-    knights = knight_struct[10],
-    holy = uint(1),
-    parrot = parrot_struct,
-)
+quest_struct = struct('quest_struct', [
+    ('quest', uint(3, enum_={'grail':0, 'shrubbery':1, 'meaning':2, 'larch':3, 'gourd':4})),
+    ('knights', knight_struct[10]),
+    ('holy', uint(1)),
+    ('parrot', parrot_struct),
+])
 
 
 def get_dead_parrot_quests(raw_data_source: Sequence[int]) -> Iterator[str]:
     '''yields a sequence of json quests where the parrot is dead'''
     data = quest_struct()
-    json_list = []
-    
+
     # fields can be assigned outside the loop for speed and convenience
     status = data.parrot.status
     quest = data.quest
 
     for data.n_ in raw_data_source:
         if status == 'dead':
-            yield quest.json_
+            yield data.json_
+
+for jstr in get_dead_parrot_quests(raw_data_source):
+    print (jstr)
             
 ```
 
