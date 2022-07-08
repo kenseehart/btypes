@@ -130,9 +130,11 @@ for quest in bcolz_data_source.query('quest', where='parrot.status=="dead"'):
 
 # Trailing Underscore Convention
 
-In order to give the developer full use of the field namespace, we distiguish fields from non-field attributes by marking the latter with a trailing underscore. For example, `foo.n_`, `foo.size_`. This means you should not define fields ending with `_`.
+In order to give the developer full use of the field namespace, we distiguish fields from non-field attributes by marking the latter with a trailing underscore. For example, `foo.n_`, `foo.size_`. This means you may not define fields ending with `_`. 
 
-However, if you implement a custom type and you wish to define your own non-field attributes, please use a trailing underscore for that purpose.
+If you implement a custom type and you wish to define your own non-field attributes, please use a trailing underscore for that purpose.
+
+You can assign arbitrarily to trailing underscore attributes (if they are not defined by btypes) for use as metadata, etc.
 
 # Metatypes, field types, and fields
 
