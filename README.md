@@ -136,8 +136,21 @@ However, if you implement a custom type and you wish to define your own non-fiel
 
 # Metatypes, field types, and fields
 
-It's important when using btypes to have a clear understanding of levels of types. So, for example, `uint` is a metatype which you instantiate to get a field type, so `uint(5)` is a 5 bit unsigned integer field type (as opposed to an unsigned integer with a value of 5). You instantiate a field type to get a field, e.g. `x = uint(5)()`, and then assign values to the field via the `x.v_` or `x.n_` attributes.
+It's important when using **btypes** to have a clear understanding of levels of types. So, for example, `uint` is a metatype which you instantiate to get a field type, so `uint(5)` is a 5 bit unsigned integer field type (as opposed to an unsigned integer with a value of 5). You instantiate a field type to get a field, e.g. `x = uint(5)()`, and then assign values to the field via the `x.v_` or `x.n_` attributes. Metatypes are important because they support expression of complex datatypes such as structures and arrays, e.g. `struct(('x', uint(5)), ('y', array(uint(3), 4)), ('z', uint(15))`. 
 
 
+# Possible future extensions
 
+- Parse Verilog to **btypes**
+  - Use an existing parser such as [Pyverilog: https://github.com/PyHDI/Pyverilog]
+  - Creates btype field types directly from a verilog string. Python code generation, if needed, is already implemented as the repr of the field type.
+
+- numpy + bcolz integration
+  - Massive performance boost by instantiating low level functions from high level python code. Potentially process terabytes of data in seconds.
+  - New `expr_` attribute gives a string representation of a field as shift-and operations operating on native integer arrays.
+  - The expression string would be compatible with C++, python, numpy, and anything using similar syntax for logic operations.
+
+- Additional Verilog and SystemVerilog support
+  - parallel bitfields to implement X and Z values
+  - interfaces to simulator/emulator tools
 
