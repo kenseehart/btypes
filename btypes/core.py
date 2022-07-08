@@ -53,6 +53,7 @@ def field_method(f):
 class unbound_field(type):
     '''Unbound field implementing propery protocol'''
     btype_: 'btype'
+    v_: Any
 
     def __init__(self, name, bases, dict_):
         super().__init__(name, bases, dict_)
@@ -87,8 +88,8 @@ class unbound_field(type):
             except AttributeError as e:
                 if self.btype_.dim_ is not None:
                     raise IndexError(f'{self.desc_} index {k} out of range') from e
-                else:
-                    raise TypeError(f'{self.desc_} is not subscriptable') from e
+                raise TypeError(f'{self.desc_} is not subscriptable') from e
+
         elif isinstance(k, slice):
             if self.btype_.dim_ is not None:
                 fname = f'{k.start}_{k.stop}_{k.step}'
@@ -124,6 +125,7 @@ class unbound_field(type):
 
     @property
     def this_(self):
+        'self reference field'
         return self
 
     @field_method
@@ -141,19 +143,26 @@ class unbound_field(type):
 
     @field_method
     def expr_(self, expr: str = '', word_size: int = 0) -> str:
+        'return low-level source code string for this field'
         return cst_source_code(self.cst_(expr, word_size))
 
     @field_method
     def expr_field_(self, expr: str, word_size: int = 0) -> str:
+        ''''return a field that implements the specified expression with this field as the namespace
+        Security Warning: do not use unless the source of expr is trusted
+        '''
+
         cst = self.cst_(expr, word_size)
         src = cst_source_code(cst)
         d = {}
-        exec('def fn(n: int):\n    return '+src, d, d)
+
+        # possibly insecure:
+        exec('def fn(n: int):\n    return '+src, d, d) # pylint: disable=exec-used
+
         fnf = fn_type(d['fn'], src).allocate_('<expr>', self)
         fnf.expr_ = lambda *a: src
 
         return fnf
-
 
 
 class field(IntDuck, metaclass=unbound_field):
@@ -207,7 +216,7 @@ class field(IntDuck, metaclass=unbound_field):
         return self.btype_.dim_
 
     # comparison
-    def __eq__(self, other):
+    def __eq__(self, other): # pylint: disable=too-many-return-statements
         if isinstance(other, int):
             return int(self) == other
 
@@ -297,6 +306,7 @@ class uint(btype):
         self.name_ = name_ or f'{type(self).__name__}{size}'
 
     class mixin_field_(field):
+        '''provide field inheritance'''
         @property
         def v_(self) -> Union[int, str]:
             v = int(self)
@@ -316,7 +326,7 @@ class uint(btype):
                     try:
                         v = int(v)
                     except ValueError:
-                        raise ValueError(f'{f}: undefined enum {v}')
+                        raise ValueError(f'{self}: undefined enum {v}')
 
             self.n_ = v
 
@@ -326,6 +336,7 @@ class sint(uint):
     '''signed integer with optional enum'''
 
     class mixin_field_(uint.mixin_field_):
+        '''inherit field from uint'''
         def __int__(self):
             v = self.n_
             if v&(1<<(self.size_-1)):
@@ -354,6 +365,7 @@ class fixed(sint):
         self.name_ = type(self).__name__
 
     class mixin_field_(NumDuck, sint.mixin_field_):
+        '''support field inheritance'''
         def __int__(self):
             return int(float(self))
 
@@ -392,6 +404,9 @@ class decimal(fixed):
 
 
 class struct(btype):
+    '''struct metatype
+    usage: struct_name = struct('struct_name', [('field_name', field_type), ...])
+    '''
     def __init__(self, name_:str = None, fields_:list = None, **fields):
         self.name_ = name_ or type(self).__name__
         self.fields_ = (fields_ or list()) + list(fields.items())
@@ -413,11 +428,11 @@ class struct(btype):
         return ftype
 
     class mixin_field_(field):
-
+        '''support field inheritance'''
         @property
         def v_(self) -> dict:
             d = {}
-            for k, t in self.btype_.fields_:
+            for k, _ in self.btype_.fields_:
                 d[k] = getattr(self, k).v_
             return d
 
@@ -458,6 +473,7 @@ class array(struct):
         self.name_ = type(self).__name__
 
     class mixin_field_(struct.mixin_field_):
+        '''support field inheritance'''
         @property
         def v_(self) -> list:
             return [self[i].v_ for i in range(self.btype_.dim_)]
@@ -493,7 +509,7 @@ class array(struct):
 class bslice(array):
     '''array slice'''
 
-    def __init__(self, atype: array, aslice: slice):
+    def __init__(self, atype: array, aslice: slice): #pylint: disable=super-init-not-called
         self.atype_ = atype
         self.etype_ = atype.etype_
         self.slice_ = aslice
@@ -533,7 +549,9 @@ class fn_type(btype):
 
 
 class BTypesTest(unittest.TestCase):
+    'btypes test suite'
     def test_simple(self):
+        'basic tests'
         u4t = uint(4) # type
         u4 = u4t() # bound field
         u4.n_ = 3 # raw int value
@@ -554,20 +572,21 @@ class BTypesTest(unittest.TestCase):
 
 
     def test_struct(self):
-        foo = struct(fields_=[
+        ''
+        eric = struct(fields_=[
             ("a", uint(3)),
             ("b", uint(4)),
         ])
 
-        bar = struct(
-            f = foo, # array of 10 foo elements
+        idle = struct(
+            f = eric, # array of 10 eric elements
             c = uint(5),
         )
 
         foobar = struct(
             a = uint(3, enum_={"alpha":0, "beta":1, "gamma":2}),  # 3 bit integer with enum
             b = sint(4), # 4 bit integer
-            bars = bar[5], # array of 5 bars
+            bars = idle[5], # array of 5 bars
         )
 
         f = foobar(0)
