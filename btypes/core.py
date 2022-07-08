@@ -13,6 +13,7 @@ import unittest
 from typing import Union, Any, Callable
 from pprint import pprint as std_pprint
 import json
+import re
 
 from btypes.expressions import CSTNode, cst_expr, cst_source_code, cst_uint, is_identifier
 from btypes.numduck import IntDuck, NumDuck
@@ -20,6 +21,9 @@ from btypes.numduck import IntDuck, NumDuck
 _all_above_excluded = set(locals().keys())
 
 # everything defined below this will be exported to the btypes package unless startswith('_')
+
+r_hex = re.compile(r'^\s*(?:0x|0X)?([0-9a-fA-F]+)(?:L{1,2}|H|h)?\s*$', )
+r_bin = re.compile(r'^\s*(?:0b|0B)?([01]+)(?:L{1,2})?\s*$', )
 
 def enum(a: Union[list, str]) -> dict:
     '''return an enum_ dict given an iterable'''
@@ -192,21 +196,52 @@ class field(IntDuck, metaclass=unbound_field):
                            ((n&self.mask_) << self.offset_))
 
     @property
-    def v_(self) -> int:
-        '''overload mixin_field_ to express as a different type'''
+    def v_(self) -> Any:
+        '''return value (int|str|list|dict), virtual: overload mixin_field_ to express as a different type (default=int)'''
         return int(self)
 
     @v_.setter
-    def v_(self, n: int):
-        '''overload mixin_field_ to receive other data types'''
+    def v_(self, n: Any):
+        '''read value (int, str, list, or dict), virtual: overload mixin_field_ to receive other data types (default=int)'''
         self.n_ = n
 
     @property
+    def bin_(self) -> str:
+        '''return binary string representation (0 padded to correct length, no prefix)'''
+        return ('0'*self.size_ + bin(self.n_)[2:])[-self.size_:]
+
+    @bin_.setter
+    def bin_(self, s: str):
+        '''read binary string, ignore the usual prefixes and suffixes, truncate overflow'''
+        m = r_bin.fullmatch(s)
+        if m:
+            self.n_ = int(m.group(1), 2)
+        else:
+            raise ValueError(f'Expected binary string, got "{s}"')
+
+    @property
+    def hex_(self) -> str:
+        '''return hex string representation (0 padded to correct length, no prefix)'''
+        hsize = (self.size_+3)//4
+        return ('0'*hsize + bin(self.n_)[2:])[-hsize:]
+
+    @hex_.setter
+    def hex_(self, s: str):
+        '''read hex string, ignore the usual prefixes and suffixes, truncate overflow'''
+        m = r_hex.fullmatch(s)
+        if m:
+            self.n_ = int(m.group(1), 16)
+        else:
+            raise ValueError(f'Expected hex string, got "{s}"')
+
+    @property
     def json_(self):
+        '''return json string representation'''
         return json.dumps(self.v_)
 
     @json_.setter
     def json_(self, s):
+        '''read json string'''
         self.v_ = json.loads(s)
 
     def __bool__(self):
@@ -306,7 +341,7 @@ class uint(btype):
         self.name_ = name_ or f'{type(self).__name__}{size}'
 
     class mixin_field_(field):
-        '''provide field inheritance'''
+        '''inherited by bound field instance'''
         @property
         def v_(self) -> Union[int, str]:
             v = int(self)
@@ -336,7 +371,7 @@ class sint(uint):
     '''signed integer with optional enum'''
 
     class mixin_field_(uint.mixin_field_):
-        '''inherit field from uint'''
+        '''inherited by bound field instance'''
         def __int__(self):
             v = self.n_
             if v&(1<<(self.size_-1)):
@@ -365,7 +400,7 @@ class fixed(sint):
         self.name_ = type(self).__name__
 
     class mixin_field_(NumDuck, sint.mixin_field_):
-        '''support field inheritance'''
+        '''inherited by bound field instance'''
         def __int__(self):
             return int(float(self))
 
@@ -428,7 +463,7 @@ class struct(btype):
         return ftype
 
     class mixin_field_(field):
-        '''support field inheritance'''
+        '''inherited by bound field instance'''
         @property
         def v_(self) -> dict:
             d = {}
@@ -473,7 +508,7 @@ class array(struct):
         self.name_ = type(self).__name__
 
     class mixin_field_(struct.mixin_field_):
-        '''support field inheritance'''
+        '''inherited by bound field instance'''
         @property
         def v_(self) -> list:
             return [self[i].v_ for i in range(self.btype_.dim_)]
@@ -499,7 +534,7 @@ class array(struct):
                 ftype = type(self)[k]
                 return ftype(self)
             else:
-                super().__getitem__(k)
+                return super().__getitem__(k)
 
         def __iter__(self):
             for f in iter(type(self)):
@@ -551,7 +586,6 @@ class fn_type(btype):
 class BTypesTest(unittest.TestCase):
     'btypes test suite'
     def test_simple(self):
-        'basic tests'
         u4t = uint(4) # type
         u4 = u4t() # bound field
         u4.n_ = 3 # raw int value
@@ -570,9 +604,21 @@ class BTypesTest(unittest.TestCase):
         with self.assertRaises(TypeError):
             u4 /= 2
 
+    def test_hex_bin(self):
+        x = uint(35)()
+        x.hex_ = 'f1234567f'
+        self.assertEqual(x, 0x71234567f)
+        self.assertEqual(x.bin_, '11100010010001101000101011001111111')
+        self.assertEqual(x.hex_, 'f1234567f')
+
+        x.hex_ = '0xfL'
+        self.assertEqual(x, 15)
+
+        x.bin_ = '0B111L'
+        self.assertEqual(x.bin_, '00000000000000000000000000000000111')
+
 
     def test_struct(self):
-        ''
         eric = struct(fields_=[
             ("a", uint(3)),
             ("b", uint(4)),

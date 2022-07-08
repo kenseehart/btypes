@@ -5,8 +5,14 @@
 ##################################################################
 [project attributes]
 proj.directory-list = [{'dirloc': loc('.'),
-                        'excludes': [u'btypes'],
-                        'filter': u'All Source Files',
+                        'excludes': (),
+                        'filter': u'*',
+                        'include_hidden': False,
+                        'recursive': True,
+                        'watch_for_changes': True},
+                       {'dirloc': loc('../examples'),
+                        'excludes': (),
+                        'filter': u'*',
                         'include_hidden': False,
                         'recursive': True,
                         'watch_for_changes': True}]
