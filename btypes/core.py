@@ -10,7 +10,7 @@ https://github.com/kenseehart/btypes
 
 
 import unittest
-from typing import Union, Any, Callable
+from typing import Union, Any, Callable, Sequence, Iterator
 from pprint import pprint as std_pprint
 import json
 import re
@@ -223,7 +223,7 @@ class field(IntDuck, metaclass=unbound_field):
     def hex_(self) -> str:
         '''return hex string representation (0 padded to correct length, no prefix)'''
         hsize = (self.size_+3)//4
-        return ('0'*hsize + bin(self.n_)[2:])[-hsize:]
+        return ('0'*hsize + hex(self.n_)[2:])[-hsize:]
 
     @hex_.setter
     def hex_(self, s: str):
@@ -441,7 +441,10 @@ class decimal(fixed):
 class struct(btype):
     '''struct metatype
     usage: struct_name = struct('struct_name', [('field_name', field_type), ...])
+
+    deprecated **kwarg style usage: struct_name = struct('struct_name', field_name=field_type, ...)
     '''
+
     def __init__(self, name_:str = None, fields_:list = None, **fields):
         self.name_ = name_ or type(self).__name__
         self.fields_ = (fields_ or list()) + list(fields.items())
@@ -609,7 +612,7 @@ class BTypesTest(unittest.TestCase):
         x.hex_ = 'f1234567f'
         self.assertEqual(x, 0x71234567f)
         self.assertEqual(x.bin_, '11100010010001101000101011001111111')
-        self.assertEqual(x.hex_, 'f1234567f')
+        self.assertEqual(x.hex_, '71234567f')
 
         x.hex_ = '0xfL'
         self.assertEqual(x, 15)
@@ -676,6 +679,45 @@ class BTypesTest(unittest.TestCase):
         self.assertEqual(ab.expr_(), '(n >> 4 & 0x7) * (n & 0xf)')
 
 
+    def test_readme_parrot(self):
+        def sequence_of_integers_from_somewhere():
+            for i in range(20):
+                yield 777*i
 
+        raw_data_source = sequence_of_integers_from_somewhere()
+
+        parrot_struct = struct('parrot_struct', [
+            ('status', uint(2, enum_={'dead': 0, 'pining': 1, 'resting': 2})),
+            ('plumage_rgb', uint(5)[3]),
+        ])
+
+        knight_struct = struct('knight_struct', [
+            ('name', uint(7)[20]),
+            ('cause_of_death', uint(3, enum_=
+                {'vorpal_bunny':0, 'liverectomy':1, 'ni':2, 'question':3, 'mint':4})),
+        ])
+
+        quest_struct = struct('quest_struct', [
+            ('quest', uint(3, enum_={'grail':0, 'shrubbery':1, 'meaning':2, 'larch':3, 'gourd':4})),
+            ('knights', knight_struct[10]),
+            ('holy', uint(1)),
+            ('parrot', parrot_struct),
+        ])
+
+
+        def get_dead_parrot_quests(raw_data_source: Sequence[int]) -> Iterator[str]:
+            '''yields a sequence of json quests where the parrot is dead'''
+            data = quest_struct()
+
+            # fields can be assigned outside the loop for speed and convenience
+            status = data.parrot.status
+            quest = data.quest
+
+            for data.n_ in raw_data_source:
+                if status == 'dead':
+                    yield data.json_
+
+        for jstr in get_dead_parrot_quests(raw_data_source):
+            print (jstr)
 
 __all__ = list(set([x for x in locals().keys() if not x.startswith('_')]) - _all_above_excluded)
