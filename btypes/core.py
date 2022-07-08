@@ -22,8 +22,8 @@ _all_above_excluded = set(locals().keys())
 
 # everything defined below this will be exported to the btypes package unless startswith('_')
 
-r_hex = re.compile(r'^\s*(?:0x|0X)?([0-9a-fA-F]+)(?:L{1,2}|H|h)?\s*$', )
-r_bin = re.compile(r'^\s*(?:0b|0B)?([01]+)(?:L{1,2})?\s*$', )
+r_hex = re.compile(r'^\s*(?:0x|0X)?([0-9a-fA-F]+)(?:[Uu]?[Ll]{1,2}|H|h)?\s*$')
+r_bin = re.compile(r'^\s*(?:0b|0B)?([01]+)(?:[Uu]?[Ll]{1,2})?\s*$')
 
 def enum(a: Union[list, str]) -> dict:
     '''return an enum_ dict given an iterable'''
