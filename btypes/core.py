@@ -301,14 +301,18 @@ class field(IntDuck, metaclass=unbound_field):
         except AttributeError as e:
             raise AttributeError(f"'{self.name_}' field has no attribute '{k}'") from e
 
-class btype:
+class btype(type):
     '''Base class for field metatypes'''
     repr_: str
     size_: int
     dim_: int = None
 
-    def __init__(self, name=None):
+    def __new__(cls, *args, name='', **kwargs):
+        args, kwargs
+        self = super().__new__(cls, name, (), {})
         self.name_ = name
+        return self
+
 
     def __call__(self, value:int=0) -> field:
         'Create a new bound interface from this btype'
@@ -469,25 +473,19 @@ class decimal(fixed):
 
 class struct(btype):
     '''struct metatype
-    usage: struct_name = struct('struct_name', [('field_name', field_type), ...])
-
-    deprecated **kwarg style usage: struct_name = struct('struct_name', field_name=field_type, ...)
+    struct_name = struct('struct_name', [('field_name', field_type), ...])
     '''
 
-    def __init__(self, name_:str=None, fields_:list=None, **fields):
-        super().__init__(name=name_)
-        self.name_ = name_ or type(self).__name__
-        self.fields_ = (fields_ or list()) + list(fields.items())
+    def __init__(self, name, fields):
+        self.name_ = name
+        self.fields_ = fields
         self.size_ = sum(f.size_ for _,f in self.fields_)
 
         # use names instead of full expansion where specified
         field_reprs = [f"('{name}', {f.name_ or f.repr_})" for name, f in self.fields_]
         fields_repr = '[' + ', '.join(field_reprs) +']'
 
-        if self.name_:
-            self.repr_ = f"struct('{self.name_}', {fields_repr})"
-        else:
-            self.repr_ = f"struct(fields_={fields_repr})"
+        self.repr_ = f"struct('{self.name_}', {fields_repr})"
 
 
     def allocate_(self, name:str='_root', parent:unbound_field=None, offset:int=0) -> unbound_field:
@@ -537,6 +535,18 @@ class struct(btype):
                 return f
             else:
                 raise TypeError(f'{k.btype_.__name__} fields do not support {type(k).__name__} indices')
+
+class metastruct(struct):
+    '''metaclass to support class syntax to define struct types
+
+    class struct_name(metaclass=metastruct):
+        field_name: field_type
+        ...
+    '''
+
+    def __init__(self, name:str, bases:tuple, dct:dict=None):
+        super().__init__(name, dct['__annotations__'].items())
+
 
 class array(struct):
     '''array'''
@@ -731,6 +741,13 @@ class BTypesTest(unittest.TestCase):
         self.assertEqual(repr(idle), "struct('idle', [('f', eric[10]), ('c', uint(5))])")
         self.assertEqual(repr(eric), "struct('eric', [('a', uint(3)), ('b', uint(4))])")
 
+    def test_class(self):
+        class eric(metaclass=metastruct):
+            a: uint(3)
+            b: uint(4)
+
+        self.assertEqual(repr(eric), "struct('eric', [('a', uint(3)), ('b', uint(4))])")
+
     def test_decimal(self):
         money = decimal(16, 2)(123.45)
 
@@ -739,10 +756,11 @@ class BTypesTest(unittest.TestCase):
         self.assertEqual(money+1.0, 124.45)
 
     def test_expr(self):
-        seven = struct('seven',
-                       a = uint(3),
-                       b = uint(4),
-        )()
+        class seven_type(metaclass=metastruct):
+            a: uint(3)
+            b: uint(4)
+
+        seven = seven_type()
 
         self.assertEqual(seven.a.expr_(), '(n >> 4 & 0x7)')
         self.assertEqual(seven.b.expr_(), '(n & 0xf)')
