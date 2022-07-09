@@ -281,12 +281,12 @@ class field(IntDuck, metaclass=unbound_field):
 
     def __setitem__(self, k, v):
         if isinstance(k, int):
-            k = f'{k}_' # array elements as field property instances
+            k = f'_{k}' # array elements as field property instances
 
         setattr(self, k, v)
 
     def __setattr__(self, k, v):
-        if hasattr(self, k) or k[0]=='_' or k[-1]=='_':
+        if k[0]=='_' or k[-1]=='_' or hasattr(self, k):
             super().__setattr__(k, v)
         else:
             msg = f'{type(self)} does not have attribute {k}'
@@ -567,6 +567,43 @@ class bslice(array):
         return ftype
 
 
+class utf8(array):
+    '''unicode utf8 string, optionally null terminated'''
+    # TODO: Low hanging performance fruit, if anyone needs this to be fast
+
+    def __init__(self, length:int, nult:bool=True, name_:str = None):
+        super().__init__(uint(8), length)
+        self.repr_ = f"utf8({length})"
+        self.nult_ = nult
+
+    class mixin_field_(array.mixin_field_):
+        '''inherited by bound field instance'''
+        @property
+        def v_(self) -> str:
+            b = bytes(self[i] for i in range(self.dim_))
+            if self.nult_:
+                n = b.find(0)
+                if n>-1:
+                    b = b[:n]
+            return b.decode('utf8')
+
+        @v_.setter
+        def v_(self, v:str):
+            if isinstance(v, int):
+                self.n_ = v
+            else:
+                if isinstance(v, str):
+                    s = v.encode('utf8')
+                elif isinstance(v, bytes):
+                    s = v
+                else:
+                    raise TypeError(f'Expected str|bytes|int, got {v}')
+
+                s = (s + b'\0'*self.dim_)[:self.dim_] # null pad to length
+
+                for i, c in enumerate(s):
+                    self[i] = c
+
 
 class fn_type(btype):
     def __init__(self, fn: Callable[[int], Any], expr: str):
@@ -678,13 +715,13 @@ class BTypesTest(unittest.TestCase):
         self.assertEqual(ab.expr_(), '(n >> 4 & 0x7) * (n & 0xf)')
         self.assertEqual(ab.expr_(), '(n >> 4 & 0x7) * (n & 0xf)')
 
+    def test_unicode(self):
+        s = utf8(10)()
+        s.v_ = 'abc'
+        assert(s.v_ == 'abc')
 
     def test_readme_parrot(self):
-        def sequence_of_integers_from_somewhere():
-            for i in range(20):
-                yield 777*i
-
-        raw_data_source = sequence_of_integers_from_somewhere()
+        from random import randint, seed, choice
 
         parrot_struct = struct('parrot_struct', [
             ('status', uint(2, enum_={'dead': 0, 'pining': 1, 'resting': 2})),
@@ -692,17 +729,41 @@ class BTypesTest(unittest.TestCase):
         ])
 
         knight_struct = struct('knight_struct', [
-            ('name', uint(7)[20]),
+            ('name', utf8(20)),
             ('cause_of_death', uint(3, enum_=
-                {'vorpal_bunny':0, 'liverectomy':1, 'ni':2, 'question':3, 'mint':4})),
+                {'vorpal_bunny':0, 'liverectomy':1, 'ni':2, 'question':3, 'mint':4, 'not dead yet': 5})),
         ])
 
         quest_struct = struct('quest_struct', [
             ('quest', uint(3, enum_={'grail':0, 'shrubbery':1, 'meaning':2, 'larch':3, 'gourd':4})),
-            ('knights', knight_struct[10]),
+            ('knights', knight_struct[3]),
             ('holy', uint(1)),
             ('parrot', parrot_struct),
         ])
+
+        def sequence_of_integers_from_somewhere():
+            seed(123)
+            n = 2**quest_struct.size_
+            q = quest_struct()
+
+            names = ['Arthur', 'Issac Newton', 'Eric', 'Who Says Ni', 'Galahad', 'Lancelot',
+                     'Gawain', 'Percivale', 'Lionell', 'Tristram de Lyones', 'Gareth', 'Bedivere',
+                     'Bleoberis', 'Lacotemale Taile', 'Lucan', 'Palomedes', 'Lamorak',
+                     'Bors de Ganis', 'Safer', 'Pelleas', 'Kay', 'Ector de Maris', 'Dagonet',
+                     'Degore', 'Brunor le Noir', 'Lebius Desconneu', 'Alymere', 'Mordred',
+                     ]
+
+            def choose_rand_enum(e):
+                e.n_ = choice(list(e.enum_.values()))
+
+            for _ in range(20):
+                q.n_ = randint(0, n-1)
+                choose_rand_enum(q.quest)
+                for j in range(q.knights.dim_):
+                    q.knights[j].name = 'Sir '+choice(names)
+                    choose_rand_enum(q.knights[j].cause_of_death)
+
+                yield q.n_
 
 
         def get_dead_parrot_quests(raw_data_source: Sequence[int]) -> Iterator[str]:
@@ -716,6 +777,8 @@ class BTypesTest(unittest.TestCase):
             for data.n_ in raw_data_source:
                 if status == 'dead':
                     yield data.json_
+
+        raw_data_source = sequence_of_integers_from_somewhere()
 
         for jstr in get_dead_parrot_quests(raw_data_source):
             print (jstr)
