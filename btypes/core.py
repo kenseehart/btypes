@@ -301,10 +301,13 @@ class field(IntDuck, metaclass=unbound_field):
             raise AttributeError(f"'{self.name_}' field has no attribute '{k}'") from e
 
 class btype:
-    '''Base class for type classes'''
+    '''Base class for field metatypes'''
     repr_: str
     size_: int
     dim_: int = None
+
+    def __init__(self, name=None):
+        self.name_ = name
 
     def __call__(self, value:int=0) -> field:
         'Create a new bound interface from this btype'
@@ -313,9 +316,13 @@ class btype:
         f.v_ = value
         return f
 
-    def allocate_(self, name, parent:unbound_field=None, offset:int=0) -> field:
+    def allocate_(self, name:str, parent:unbound_field=None, offset:int=0) -> field:
         'allocate a unbound_field of this btype, into the specified parent if specified, else allocate as the interface root'
-        ufield = unbound_field(name, (type(self).mixin_field_,), {})
+
+        if type(self) is btype:
+            raise TypeError('btype is a virtual class and can not be allocated')
+
+        ufield = unbound_field(name or self.repr_, (type(self).mixin_field_,), {}) #pylint: disable=no-member
         ufield.parent_ = parent
         ufield.root_ = parent.root_ if parent else ufield
         ufield.size_ = self.size_
@@ -333,12 +340,12 @@ class btype:
 class uint(btype):
     '''unsigned integer with optional enum'''
 
-    def __init__(self, size:int, enum_:dict = None, name_:str = None):
+    def __init__(self, size:int, enum_:dict=None, name=None):
+        super().__init__(name)
         self.size_ = size
         self.repr_ = f"uint({size})"
         self.enum_ = enum_ or {}
         self.renum_ = {v:k for k,v in self.enum_.items()}
-        self.name_ = name_ or f'{type(self).__name__}{size}'
 
     class mixin_field_(field):
         '''inherited by bound field instance'''
@@ -389,15 +396,14 @@ class fixed(sint):
     base = base of digits
     '''
 
-    def __init__(self, size:int, precision: int, base:int):
+    def __init__(self, size:int, precision: int, base:int, name=None):
+        super().__init__(name)
         self.precision_ = precision
         self.base_ = base
         self.divisor_ = base**precision
         self.size_ = size
-        self.repr_ = f"fixed({size, precision, base})"
         self.max_ = ((1<<size)-1)/self.divisor_
         self.min_ = -self.max_
-        self.name_ = type(self).__name__
 
     class mixin_field_(NumDuck, sint.mixin_field_):
         '''inherited by bound field instance'''
@@ -432,9 +438,9 @@ class decimal(fixed):
     decoded values (self.v_) are float
     '''
 
-    def __init__(self, size:int, precision:int):
-        super().__init__(size, precision, 10)
-        self.repr_ = f"decimal({size, precision})"
+    def __init__(self, size:int, precision:int, name=None):
+        super().__init__(size, precision, 10, name=name)
+        self.repr_ = f"decimal({size}, {precision})"
 
 
 
@@ -445,11 +451,21 @@ class struct(btype):
     deprecated **kwarg style usage: struct_name = struct('struct_name', field_name=field_type, ...)
     '''
 
-    def __init__(self, name_:str = None, fields_:list = None, **fields):
+    def __init__(self, name_:str=None, fields_:list=None, **fields):
+        super().__init__(name=name_)
         self.name_ = name_ or type(self).__name__
         self.fields_ = (fields_ or list()) + list(fields.items())
         self.size_ = sum(f.size_ for _,f in self.fields_)
-        self.repr_ = f"struct(name_='{self.name_}', fields_={fields})"
+
+        # use names instead of full expansion where specified
+        field_reprs = [f"('{name}', {f.name_ or f.repr_})" for name, f in self.fields_]
+        fields_repr = '[' + ', '.join(field_reprs) +']'
+
+        if self.name_:
+            self.repr_ = f"struct('{self.name_}', {fields_repr})"
+        else:
+            self.repr_ = f"struct(fields_={fields_repr})"
+
 
     def allocate_(self, name:str='_root', parent:unbound_field=None, offset:int=0) -> unbound_field:
         '''allocate a field recursively'''
@@ -502,13 +518,13 @@ class struct(btype):
 class array(struct):
     '''array'''
 
-    def __init__(self, etype: btype, dim:int):
+    def __init__(self, etype: btype, dim:int, name:str=None):
         self.etype_ = etype
         self.dim_ = dim
         self.size_ = etype.size_*dim
-        self.repr_ = f"{etype}[{dim}]"
+        self.repr_ = f"{etype.name_ or etype.repr_}[{dim}]"
         self.fields_ = tuple((f'_{i}',  etype) for i in range(dim))
-        self.name_ = type(self).__name__
+        self.name_ = name
 
     class mixin_field_(struct.mixin_field_):
         '''inherited by bound field instance'''
@@ -644,6 +660,7 @@ class BTypesTest(unittest.TestCase):
         with self.assertRaises(TypeError):
             u4 /= 2
 
+
     def test_hex_bin(self):
         x = uint(35)()
         x.hex_ = 'f1234567f'
@@ -659,21 +676,21 @@ class BTypesTest(unittest.TestCase):
 
 
     def test_struct(self):
-        eric = struct(fields_=[
+        eric = struct('eric', [
             ("a", uint(3)),
             ("b", uint(4)),
         ])
 
-        idle = struct(
-            f = eric, # array of 10 eric elements
-            c = uint(5),
-        )
+        idle = struct('idle', [
+            ('f', eric[10]), # array of 10 eric elements
+            ('c', uint(5)),
+        ])
 
-        foobar = struct(
-            a = uint(3, enum_={"alpha":0, "beta":1, "gamma":2}),  # 3 bit integer with enum
-            b = sint(4), # 4 bit integer
-            bars = idle[5], # array of 5 bars
-        )
+        foobar = struct('foobar', [
+            ('a', uint(3, enum_={"alpha":0, "beta":1, "gamma":2})),  # 3 bit integer with enum
+            ('b', sint(4)), # 4 bit integer
+            ('bars', idle[5]), # array of 5 bars
+        ])
 
         f = foobar(0)
         f.a = 'beta'
@@ -687,6 +704,9 @@ class BTypesTest(unittest.TestCase):
 
         with self.assertRaises(AttributeError):
             f.c
+
+        self.assertEqual(repr(idle), "struct('idle', [('f', eric[10]), ('c', uint(5))])")
+        self.assertEqual(repr(eric), "struct('eric', [('a', uint(3)), ('b', uint(4))])")
 
     def test_decimal(self):
         money = decimal(16, 2)(123.45)
