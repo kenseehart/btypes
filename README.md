@@ -50,23 +50,28 @@ Although it can be argued that byte/word alignment is usually a good idea, `btyp
 
 raw_data_source = sequence_of_integers_from_somewhere()
 
-parrot_struct = struct('parrot_struct', [
-    ('status', uint(2, enum_={'dead': 0, 'pining': 1, 'resting': 2})),
-    ('plumage_rgb', uint(5)[3]),
-])
+class parrot_struct(metaclass=metastruct):
+    status: uint(2, {'dead': 0, 'pining': 1, 'resting': 2})
+    plumage_rgb: uint(5)[3]
 
-knight_struct = struct('knight_struct', [
-    ('name', uint(7)[20]),
-    ('cause_of_death', uint(3, enum_=
-        {'vorpal_bunny':0, 'liverectomy':1, 'ni':2, 'question':3, 'mint':4})),
-])
+death_enum = uint(3, {
+    'vorpal_bunny': 0,
+    'liverectomy': 1,
+    'ni': 2,
+    'question': 3,
+    'mint': 4,
+    'not dead yet': 5,
+})
 
-quest_struct = struct('quest_struct', [
-    ('quest', uint(3, enum_={'grail':0, 'shrubbery':1, 'meaning':2, 'larch':3, 'gourd':4})),
-    ('knights', knight_struct[10]),
-    ('holy', uint(1)),
-    ('parrot', parrot_struct),
-])
+class knight_struct(metaclass=metastruct):
+    name: utf8(20)
+    cause_of_death: death_enum
+
+class quest_struct(metaclass=metastruct):
+    quest: uint(3, enum_={'grail':0, 'shrubbery':1, 'meaning':2, 'larch':3, 'gourd':4})
+    knights: knight_struct[3]
+    holy: uint(1)
+    parrot: parrot_struct
 
 
 def get_dead_parrot_quests(raw_data_source: Sequence[int]) -> Iterator[str]:
@@ -142,6 +147,26 @@ You can assign arbitrarily to trailing underscore attributes (if they are not de
 # Metatypes, field types, and fields
 
 It's important when using **btypes** to have a clear understanding of levels of types. So, for example, `uint` is a metatype which you instantiate to get a field type, so `uint(5)` is a 5 bit unsigned integer field type (as opposed to an unsigned integer with a value of 5). You instantiate a field type to get a field, e.g. `x = uint(5)()`, and then assign values to the field via the `x.v_` or `x.n_` attributes. Metatypes are important because they support expression of complex datatypes such as structures and arrays, e.g. `struct(('x', uint(5)), ('y', array(uint(3), 4)), ('z', uint(15))`. 
+
+# Two syntaxes for struct
+
+## Inline syntax
+
+This is convenient for dynamic type generation, but doesn't support autocomplete. Also, this matches the repr of the btype.
+
+``` python
+struct_name = struct('struct_name', [('field_name', field_type), ...])
+```
+
+## Class syntax
+
+This is better for production code. The type annotations provide support for autocomplete and other coding tools.
+
+``` python
+class struct_name(metaclass=metastruct):
+    field_name: field_type
+    ...
+```
 
 
 # Possible future extensions
