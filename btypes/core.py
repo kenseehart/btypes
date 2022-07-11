@@ -503,6 +503,16 @@ class struct(btype):
 
         return ftype
 
+    @property
+    def classdef_(self):
+        'return class definition source code for this btype'
+        lines = [f'class {self.name_}(metaclass=metastruct):']
+        for name, typ in self.fields_:
+            lines.append(f'    {name}: {typ.name_ or typ.repr_}')
+
+        return '\n'.join(lines)+'\n\n'
+
+
     class mixin_field_(field):
         '''inherited by bound field instance'''
         @property
@@ -748,6 +758,11 @@ class BTypesTest(unittest.TestCase):
             b: uint(4)
 
         self.assertEqual(repr(eric), "struct('eric', [('a', uint(3)), ('b', uint(4))])")
+        self.assertEqual(eric.classdef_, '''class eric(metaclass=metastruct):
+    a: uint(3)
+    b: uint(4)
+
+''')
 
     def test_decimal(self):
         money = decimal(16, 2)(123.45)
