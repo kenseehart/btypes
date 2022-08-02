@@ -211,3 +211,15 @@ class struct_name(metaclass=metastruct):
   - Although btypes is packed by default, sometimes you need unpacked structures
   - Define rules for byte/word alignment, always explicit
   - Maximize compatibility with C, although alignment rules of C bitfields are not well-defined
+
+# Related projects
+
+- https://github.com/JnyJny/bitvector - A very simple bit field implementation
+- https://pypi.org/project/bfield - Another simple bit field implementation
+- https://pypi.org/project/ctypes-bitfield/ - bitfields with ctypes integration
+- https://pypi.org/project/sparsebitfield/ - sparse sets of large integers (unrelated use case)
+- https://github.com/stestagg/bitfield - sparse sets of large integers optimised for sequential integers (unrelated use case)
+
+# Unrelated project with same name
+ - https://pypi.org/project/btypes/ - expresses an alternative opinion of naming convention for built-in types Int, Str, etc...
+
