@@ -2,7 +2,7 @@
 ![eric half-a-bee](images/b.png)
 # btypes
 
-Btypes is a tool for working with packed binary data. It's ideal for things like verilog interfaces, and any situation where you are working with arbitrarily sized bitfields, and you need precise convenient control of the bit arrangement.
+Btypes is an easy to use high performance bit field protocol framework for working with packed binary data. It's ideal for things like verilog interfaces, and any situation where you are working with arbitrarily sized bitfields, and you need precise convenient control of the bit arrangement. Your protocol is expressed concisely with any composition of ints, structs, arrays, and user defined types.
 
 # Philosophy of btypes
 
@@ -33,7 +33,7 @@ As the name suggests, some of concepts are inspired by ctypes. While there are s
 
 Unfortunately, the core philosophy of C/C++ is that the language ultimately decides how to allocate bits for optimal performance, and the language thinks it knows better than you how to do this, such as respecting byte or word boundaries. If you have a good reason to control bit alignment, you have to write methods to explicitly extract the desired bits. So bitfields in C are inadequate if you want to really control bitwise allocation and have predictable results, such as assuming the size in bits of a struct is the sum of the sizes of it's members. This level of control is relevant for things like protocol implementations and verilog. Now with `btypes`, bitfields behave the way you expect them to work.
 
-In other words, `btypes` prioritizes detailed control over optimization and it does not respect word or byte boundaries. A struct with a 5 bit integer and a 13 bit integer is an 18 bit struct. Of course if you choose to design your structures to respect word boundaries, there may be use cases where doing so can improve performance, but that's entirely up to you.
+In other words, `btypes` prioritizes explicit control over respect over word or byte boundaries. A struct with a 5 bit integer and a 13 bit integer is an 18 bit struct, and an array of 5 18 bit stucts is exactly 90 bits. Of course if you choose to design your structures to respect word boundaries, there may be use cases where doing so can improve performance, but that's entirely up to you.
 
 The python `int` type efficiently implements a bit field of unbounded size. Btypes leverages this abstraction for raw binary data rather than the more conventional use of `bytes`. Because of this, byte misalignment issues do not add any expressive complexity. A field of any size or alignment can be extracted with a `shift-and` operation, and written with `shift-or`.
 
@@ -126,6 +126,29 @@ When used directly, bound fields have duck-type behavior similar to their respec
 
 In `btypes`, performance is acheived by performing nearly all symbolic processing at interface allocation time, prior to binding data, and typically outside the main loop. So a python only application is pretty quick. Inside the main loop, a bound field is usually computed with nothing more than a `shift-and` operation.
 
+``` python
+
+class MyRegister(metaclass=metastruct):
+    rtype: uint(2, enum_={'grail':0, 'shrubbery':1, 'meaning':2, 'larch':3, 'gourd':4})
+    stuff: uint(3)
+    junk: uint(1)
+
+class MyProtocol(metaclass=metastruct):
+    header: uint(5)
+    a: MyRegister
+    b: MyRegister
+    c: MyRegister
+
+def look_for_fives(datastream: Sequence[int]):
+    buffer = MyProtocol() # allocation of bit fields happens here, outside the loop
+    bstuff = buffer.b.stuff # optimization: do attribute access outside loop (reference semantics)
+
+    for n in datastream(): # iterate data source as sequence of abitrarily sized integers
+        buffer.n_ = n # put the next block of data in the buffer
+        if bstuff==5: # check if buffer.b.stuff == 5, this reduces to a simple shift-and operation with negligible overhead
+            handle_5()
+```
+
 The expressions module allows you to translate expressions such as filters and rules into purely numerical bitwise expressions. These expressions behave in the same way as ordinary fields, so you can bind them to a data source. Also they can be rendered as C/C++/python compatible source code strings which can then be processed with external tools such as numpy or compiled as C/C++. For example, `foo.payload.page[2].widget_type == "fortytwo"` might translate to the somewhat less readable but faster `"(x[5] << 21) & 0x3f) == 42"`. That latter expression can filter millions of blocks per second, and the smaller result set can be conveniently processed in python. 
 
 If you need performance that exceeds typical C++, we can help. See [high performance query module](https://github.com/kenseehart/btypes/issues/2) This would take about 40 hours of effort, hopefully with the support of a patron. Let me know if this is important to you. 
@@ -184,3 +207,7 @@ class struct_name(metaclass=metastruct):
   - parallel bitfields to implement X and Z values
   - interfaces to simulator/emulator tools
 
+- Alternate customizable packing
+  - Although btypes is packed by default, sometimes you need unpacked structures
+  - Define rules for byte/word alignment, always explicit
+  - Maximize compatibility with C, although alignment rules of C bitfields are not well-defined
