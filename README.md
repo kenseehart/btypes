@@ -194,8 +194,11 @@ class struct_name(metaclass=metastruct):
 
 # Possible future extensions
 
-- Parse Verilog to **btypes**
-  - Use an existing parser such as [Pyverilog: https://github.com/PyHDI/Pyverilog]
+- Parse System Verilog structs to **btypes**
+  - Use an existing parser such as:
+    - [sv-parser: https://github.com/dalance/sv-parser] Complete System Verilog parser in Rust
+    - [hdlConvertor: https://pypi.org/project/hdlConvertor] Complete System Verilog parser in Python
+    
   - Creates btype field types directly from a verilog string. Python code generation, if needed, is already implemented as the repr of the field type.
 
 - numpy + bcolz integration
@@ -219,6 +222,8 @@ class struct_name(metaclass=metastruct):
 - https://pypi.org/project/ctypes-bitfield/ - bitfields with ctypes integration
 - https://pypi.org/project/sparsebitfield/ - sparse sets of large integers (unrelated use case)
 - https://github.com/stestagg/bitfield - sparse sets of large integers optimised for sequential integers (unrelated use case)
+- https://github.com/not-napoleon/named_bitfield - Another simple bit field implementation
+- https://github.com/scott-griffiths/bitstring - Supports all kinds of slicing an dicing of bit strings
 
 # Unrelated project with same name
  - https://pypi.org/project/btypes/ - expresses an alternative opinion of naming convention for built-in types Int, Str, etc...
