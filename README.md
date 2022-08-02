@@ -203,8 +203,10 @@ class struct_name(metaclass=metastruct):
 
 - numpy + bcolz integration
   - Massive performance boost by instantiating low level functions from high level python code. Potentially process terabytes of data in seconds.
+  - bcolz and btypes have excellent affinity
   - New `expr_` attribute gives a string representation of a field as shift-and operations operating on native integer arrays.
-  - The expression string would be compatible with C++, python, numpy, and anything using similar syntax for logic operations.
+  - Any expression using the usual binary operators and bitfields can be expressed as a low level source code string
+  - The expression string would be compatible with C++, python, numpy, and anything using similar syntax for logic/arithmetic operations.
 
 - Additional Verilog and SystemVerilog support
   - parallel bitfields to implement X and Z values
