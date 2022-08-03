@@ -1,7 +1,7 @@
 """
 btypes.core
 
-A framework for packed binary data
+A framework for bit fields
 
 Copyright 2020-2022, Ken Seehart
 MIT License
@@ -187,11 +187,12 @@ class field(IntDuck, metaclass=unbound_field):
 
     @property
     def n_(self) -> int:
-        '''raw integer value'''
+        '''return the raw unsigned integer value'''
         return (self.target_[0] >> self.offset_) & self.mask_
 
     @n_.setter
     def n_(self, n: int):
+        '''set the raw integer value (signed or unsigned)'''
         self.target_[0] = (self.target_[0] & ~(self.mask_ << self.offset_) |
                            ((n&self.mask_) << self.offset_))
 
@@ -343,7 +344,7 @@ class uint(btype):
     def __init__(self, size:int, enum_:dict=None, name=None):
         super().__init__(name)
         self.size_ = size
-        self.repr_ = f"uint({size})"
+        self.repr_ = f"{type(self).__name__}({size})"
         self.enum_ = enum_ or {}
         self.renum_ = {v:k for k,v in self.enum_.items()}
 
@@ -372,6 +373,28 @@ class uint(btype):
 
             self.n_ = v
 
+class svreg(uint):
+    '''uint with system verilog slice semantics'''
+
+    class mixin_field_(field):
+        '''inherited by bound field instance'''
+
+        def __getitem__(self, k:slice):
+            'return a bound field using SV slice semantics'
+            if not(isinstance(k, slice)):
+                return super().__getitem__(k)
+            
+            sz = 1 + k.start - k.stop
+            offset = k.stop
+            bt:btype = type(self.btype_)(sz)
+            uf = bt.allocate_(f'{self.name_}[{k.start}:{k.stop}]', self, offset)
+            f = uf(self)
+            return f
+
+        def __setitem__(self, k:slice, v:Any):
+            'set subfield value using SV slice semantics'
+            f = self.__getitem__(k)
+            f.v_ = v
 
 
 class sint(uint):
@@ -739,6 +762,14 @@ class BTypesTest(unittest.TestCase):
         s = utf8(10)()
         s.v_ = 'abc'
         assert(s.v_ == 'abc')
+
+    def test_svreg(self):
+        r = svreg(12)(0xbee)
+        r2 = r[11:8]
+        self.assertEqual(r2, 0xb)
+        r2.v_ = 0xf
+        r[7:4] = 0
+        self.assertEqual(r, 0xf0e)
 
     def test_readme_parrot(self):
         from random import randint, seed, choice
