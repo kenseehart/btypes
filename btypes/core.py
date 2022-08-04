@@ -385,7 +385,7 @@ class svreg(uint):
                 return super().__getitem__(k)
             
             sz = 1 + k.start - k.stop
-            offset = k.stop
+            offset = self.size_ - k.start - 1
             bt:btype = type(self.btype_)(sz)
             uf = bt.allocate_(f'{self.name_}[{k.start}:{k.stop}]', self, offset)
             f = uf(self)
@@ -764,12 +764,12 @@ class BTypesTest(unittest.TestCase):
         assert(s.v_ == 'abc')
 
     def test_svreg(self):
-        r = svreg(12)(0xbee)
-        r2 = r[11:8]
-        self.assertEqual(r2, 0xb)
-        r2.v_ = 0xf
-        r[7:4] = 0
-        self.assertEqual(r, 0xf0e)
+        r = svreg(28)(0xabadbee)
+        r2 = r[15:4]
+        self.assertEqual(r2, 0xbad)
+        r2.v_ = 0xead
+        r[3:0] = 0xd
+        self.assertEqual(r, 0xdeadbee)
 
     def test_readme_parrot(self):
         from random import randint, seed, choice
