@@ -191,6 +191,18 @@ class struct_name(metaclass=metastruct):
     ...
 ```
 
+# System Verilog support
+
+By default, `btypes` uses python semantics for indexing and slicing because it seems preferable to use the conventions of the native language. However, in order to make system verilog protocols more readable, we have a `svreg` type that implements System Verilog slice semantics.
+
+``` python
+r = svreg(12)(0xbee)
+r2 = r[11:8]
+self.assertEqual(r2, 0xb)
+r2.v_ = 0xf
+r[7:4] = 0
+self.assertEqual(r, 0xf0e)
+```
 
 # Possible future extensions
 
