@@ -105,7 +105,7 @@ class unbound_field(type):
                     setattr(self, fname, f)
                     return f
             else:
-                raise TypeError(f'{self.desc_} is not subscriptable') from e
+                raise TypeError(f'{self.desc_} is not subscriptable')
         else:
             try:
                 return getattr(self, k)
