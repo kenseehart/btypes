@@ -6,7 +6,7 @@ setup(
     author='Ken Seehart',
     author_email='ken@seehart.com',
     packages=['btypes'],
-    url='http://pypi.python.org/pypi/btypes/',
+    url='https://github.com/kenseehart/btypes',
     license='LICENSE',
     description='A framework for structured bitfield processing',
     long_description=open('README.md').read(),
