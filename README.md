@@ -18,7 +18,7 @@ A vis-a-vis its entity, d'you see?
 
 # Comparison to [ctypes](https://docs.python.org/3/library/ctypes.html)
 
-As the name suggests, some of concepts are inspired by ctypes. While there are similarities, the primary purpose is different. Both btypes and ctypes are able to easily encode/decode binary data such as c structs without a generated wrapper.
+As the name suggests, some of the concepts are inspired by ctypes. While there are similarities, the primary purpose is different. Both btypes and ctypes are able to easily encode/decode binary data in pure python such as c structs without a generated wrapper. The differ in that `ctypes` maps to c structs while `btypes` maps to bit vectors.
 
 | **tool** | **model** | **primary purpose** | **implementation** |
 |----|--------|---|----|
