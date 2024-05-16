@@ -60,7 +60,7 @@ death_enum = uint(3, {
     'ni': 2,
     'question': 3,
     'mint': 4,
-    'not dead yet': 5,
+    'not_dead_yet': 5,
 })
 
 class knight_struct(metaclass=metastruct):
@@ -129,7 +129,7 @@ In `btypes`, performance is acheived by performing nearly all symbolic processin
 ``` python
 
 class MyRegister(metaclass=metastruct):
-    rtype: uint(2, enum_={'grail':0, 'shrubbery':1, 'meaning':2, 'larch':3, 'gourd':4})
+    rtype: uint(2, enum_={'grail':0, 'shrubbery':1, 'meaning':2, 'larch':3})
     stuff: uint(3)
     junk: uint(1)
 
